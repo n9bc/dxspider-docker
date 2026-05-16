@@ -152,14 +152,6 @@ source on first build. If the build fails with a Perl error referencing a
 missing or mismatched variable, check `/spider/local/DXVars.pm` against the
 template in `dxspider/templates/DXVars.pm.tmpl` and the DXSpider source.
 
-### (d) Spot-file backfill is a no-op on native DXSpider data (v1)
-
-Backfill reads CSV/TSV `*.spots` files from the shared volume. DXSpider's
-native spot files use Perl `Data::Dumper`/binary format and are NOT parsed in
-v1. With `DX_BACKFILL_ON_START=true` first boot is safe but inserts 0
-historical spots; charts populate from the live ingestor. Native-format
-backfill is a Phase 2 item.
-
 ### (c) ttyd version and architecture
 
 The `dxspider` image installs ttyd 1.7.7 as a static binary from GitHub
@@ -173,6 +165,24 @@ docker compose build \
 ```
 
 Or build ttyd from source: https://github.com/tsl0922/ttyd
+
+### (d) Spot-file backfill is a no-op on native DXSpider data (v1)
+
+Backfill reads CSV/TSV `*.spots` files from the shared volume. DXSpider's
+native spot files use Perl `Data::Dumper`/binary format and are NOT parsed in
+v1. With `DX_BACKFILL_ON_START=true` first boot is safe but inserts 0
+historical spots; charts populate from the live ingestor. Native-format
+backfill is a Phase 2 item.
+
+### (e) show/users poll shares the telnet stream with spots (Phase-2 simplification)
+
+The v1 `show/users` poll sends the command on the same telnet connection used
+for spot streaming and collects response lines within a 1-second window. This
+means that spot lines arriving during the collection window may be interleaved
+with the `show/users` output, and vice versa. In practice the volume is low
+enough that this is imperceptible, but it is a documented simplification.
+Proper protocol multiplexing (demultiplexing spot vs. response traffic on the
+same stream) is a Phase-2 item.
 
 ## Phase 2 — Partner peering and RBN aggregator (not active in v1)
 

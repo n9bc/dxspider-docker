@@ -155,6 +155,42 @@
     ).join('');
   }
 
+  function renderRareDx(data) {
+    renderTable('rareDxTable', data, ['callsign', 'count']);
+  }
+
+  // -------------------------------------------------------------------------
+  // Callsign lookup
+  // -------------------------------------------------------------------------
+  async function lookupCallsign() {
+    const call = ($('callsignInput').value || '').trim().toUpperCase();
+    if (!call) return;
+    try {
+      const data = await apiFetch(`/api/callsign/${encodeURIComponent(call)}`);
+      $('csCall').textContent = data.callsign;
+      $('csAsSpotter').textContent = data.as_spotter;
+      $('csAsDx').textContent = data.as_dx;
+
+      const tbody = document.querySelector('#callsignRecentTable tbody');
+      tbody.innerHTML = (data.recent || []).map(r => {
+        const ts = (r.ts || '').substring(0, 19).replace('T', ' ');
+        return `<tr>
+          <td>${ts}</td>
+          <td>${r.spotter || ''}</td>
+          <td>${r.dx_call || ''}</td>
+          <td>${r.freq_khz != null ? Number(r.freq_khz).toFixed(1) : ''}</td>
+          <td>${r.band || ''}</td>
+          <td>${r.mode || ''}</td>
+          <td>${r.source || ''}</td>
+        </tr>`;
+      }).join('');
+
+      $('callsignResult').hidden = false;
+    } catch (err) {
+      console.error('Callsign lookup failed:', err);
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Ticker
   // -------------------------------------------------------------------------
@@ -192,13 +228,14 @@
     const geoBy = $('geoBy').value;
 
     try {
-      const [activity, bands, modes, geo, spotters, topDx, users] = await Promise.all([
+      const [activity, bands, modes, geo, spotters, topDx, rareDxData, users] = await Promise.all([
         apiFetch(`/api/activity?source=${src}&hours=24`),
         apiFetch(`/api/bands?source=${src}`),
         apiFetch(`/api/modes?source=${src}`),
         apiFetch(`/api/geo?source=${src}&by=${geoBy}&top=15`),
         apiFetch(`/api/top/spotters?source=${src}&limit=10&hours=24`),
         apiFetch(`/api/top/dx?source=${src}&limit=10&hours=24`),
+        apiFetch(`/api/top/rare-dx?source=${src}&limit=10&hours=24`),
         apiFetch('/api/users'),
       ]);
 
@@ -208,6 +245,7 @@
       renderGeo(geo);
       renderTable('spottersTable', spotters, ['callsign', 'count']);
       renderTable('topDxTable', topDx, ['callsign', 'count']);
+      renderRareDx(rareDxData);
       renderUsers(users);
     } catch (err) {
       console.error('Refresh failed:', err);
@@ -274,6 +312,11 @@
 
     $('geoBy').addEventListener('change', () => {
       refreshAll();
+    });
+
+    $('callsignBtn').addEventListener('click', lookupCallsign);
+    $('callsignInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') lookupCallsign();
     });
   }
 

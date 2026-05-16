@@ -33,6 +33,8 @@ __all__ = [
     "geo_breakdown",
     "top_spotters",
     "top_dx",
+    "rare_dx",
+    "callsign_detail",
     "connected",
 ]
 
@@ -266,6 +268,104 @@ async def top_dx(
         reverse=True,
     )
     return ranked[:limit]
+
+
+async def rare_dx(
+    repo: Repo,
+    *,
+    source: str = "both",
+    hours: int = 24,
+    limit: int = 10,
+    _now: "dt.datetime | None" = None,
+) -> list[dict[str, Any]]:
+    """Return the least-spotted DX callsigns in the last *hours* hours.
+
+    Returns ``[{"callsign": str, "count": int}, ...]`` ascending by count then
+    callsign (rarest first), up to *limit* entries.  Derived from
+    ``fetch_spots`` — mirrors ``top_dx`` but in ascending order.
+    """
+    now = _now if _now is not None else _now_utc()
+    since = now - dt.timedelta(hours=hours)
+
+    src_filter = _source_filter(source)
+    spots = await repo.fetch_spots(since, now, src_filter)
+
+    totals: dict[str, int] = defaultdict(int)
+    for spot in spots:
+        totals[spot["dx_call"]] += 1
+
+    ranked = sorted(
+        [{"callsign": cs, "count": cnt} for cs, cnt in totals.items()],
+        key=lambda x: (x["count"], x["callsign"]),
+    )
+    return ranked[:limit]
+
+
+async def callsign_detail(
+    repo: Repo,
+    call: str,
+    *,
+    hours: int = 168,
+    _now: "dt.datetime | None" = None,
+) -> dict[str, Any]:
+    """Return activity detail for a single callsign over the last *hours* hours.
+
+    Returns::
+
+        {
+            "callsign": <upper-cased call>,
+            "as_spotter": int,   # times this call appeared as spotter
+            "as_dx": int,        # times this call appeared as dx_call
+            "recent": [          # up to 25 most-recent spots, newest first
+                {"ts", "spotter", "dx_call", "freq_khz", "band", "mode", "source"},
+                ...
+            ],
+        }
+
+    Uses ``fetch_spots`` with no source filter over the full window, then
+    filters in Python for spots where ``spotter == call`` or ``dx_call == call``.
+    """
+    call_upper = call.upper()
+    now = _now if _now is not None else _now_utc()
+    since = now - dt.timedelta(hours=hours)
+
+    all_spots = await repo.fetch_spots(since, now, None)
+
+    as_spotter = 0
+    as_dx = 0
+    matching: list[dict[str, Any]] = []
+
+    for spot in all_spots:
+        spotter = spot.get("spotter", "")
+        dx_call = spot.get("dx_call", "")
+        if spotter.upper() == call_upper or dx_call.upper() == call_upper:
+            if spotter.upper() == call_upper:
+                as_spotter += 1
+            if dx_call.upper() == call_upper:
+                as_dx += 1
+            matching.append(spot)
+
+    # Sort newest first, then take up to 25
+    matching.sort(key=lambda r: r["ts"], reverse=True)
+    recent = [
+        {
+            "ts": r["ts"].isoformat() if hasattr(r["ts"], "isoformat") else str(r["ts"]),
+            "spotter": r.get("spotter"),
+            "dx_call": r.get("dx_call"),
+            "freq_khz": r.get("freq_khz"),
+            "band": r.get("band"),
+            "mode": r.get("mode"),
+            "source": r.get("source"),
+        }
+        for r in matching[:25]
+    ]
+
+    return {
+        "callsign": call_upper,
+        "as_spotter": as_spotter,
+        "as_dx": as_dx,
+        "recent": recent,
+    }
 
 
 async def connected(repo: Repo) -> dict[str, Any]:

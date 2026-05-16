@@ -162,7 +162,7 @@ class MemoryRepo(Repo):
         rows = [r for r in self._spots if since <= r["ts"] < until]
         if source is not None:
             rows = [r for r in rows if r["source"] == source]
-        return list(rows)
+        return sorted(rows, key=lambda r: r["ts"])
 
     async def rollup_rows(self) -> list[dict[str, Any]]:
         result = []

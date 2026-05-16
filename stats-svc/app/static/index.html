@@ -81,6 +81,40 @@
       </div>
     </section>
 
+    <!-- Rare DX -->
+    <section class="card" id="rareDxSection">
+      <h2>Rare DX</h2>
+      <div class="table-wrap">
+        <table id="rareDxTable">
+          <thead><tr><th>#</th><th>Callsign</th><th>Times Spotted</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Callsign Lookup -->
+    <section class="card" id="callsignSection">
+      <h2>Callsign Lookup</h2>
+      <div class="callsign-lookup">
+        <input type="text" id="callsignInput" placeholder="e.g. JA1XX" maxlength="12" />
+        <button id="callsignBtn">Look up</button>
+      </div>
+      <div id="callsignResult" class="callsign-result" hidden>
+        <p class="callsign-summary">
+          <strong id="csCall"></strong>
+          &mdash; spotted others <strong id="csAsSpotter"></strong>&times;,
+          spotted as DX <strong id="csAsDx"></strong>&times;
+          (last 7 days)
+        </p>
+        <div class="table-wrap">
+          <table id="callsignRecentTable">
+            <thead><tr><th>Time</th><th>Spotter</th><th>DX</th><th>Freq</th><th>Band</th><th>Mode</th><th>Src</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <!-- Live Spot Ticker -->
     <section class="card card--wide" id="tickerSection">
       <h2>Live Spot Ticker</h2>

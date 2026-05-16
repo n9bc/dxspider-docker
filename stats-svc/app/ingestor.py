@@ -192,8 +192,8 @@ class Ingestor:
 
                 if isinstance(rec, SpotRecord) and rec.kind == "spot":
                     ts = self._clock()
-                    await self._repo.insert_spot(rec, ts)
-                    if self._hub is not None:
+                    inserted = await self._repo.insert_spot_dedup(rec, ts)
+                    if inserted and self._hub is not None:
                         await self._hub.broadcast(
                             {"type": "spot", "data": spot_to_dict(rec)}
                         )

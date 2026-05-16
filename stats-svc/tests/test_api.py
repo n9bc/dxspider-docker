@@ -331,6 +331,131 @@ def test_top_dx_invalid_source_422(client: TestClient):
 
 
 # ---------------------------------------------------------------------------
+# Rare DX
+# ---------------------------------------------------------------------------
+
+def test_rare_dx_returns_list(client: TestClient):
+    resp = client.get("/api/top/rare-dx")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, list)
+
+
+def test_rare_dx_shape(client: TestClient):
+    resp = client.get("/api/top/rare-dx")
+    assert resp.status_code == 200
+    for item in resp.json():
+        assert "callsign" in item
+        assert "count" in item
+
+
+def test_rare_dx_ascending_order(client: TestClient):
+    """Counts must be ascending (rarest first)."""
+    resp = client.get("/api/top/rare-dx?limit=100")
+    assert resp.status_code == 200
+    data = resp.json()
+    counts = [item["count"] for item in data]
+    assert counts == sorted(counts)
+
+
+def test_rare_dx_invalid_source_422(client: TestClient):
+    resp = client.get("/api/top/rare-dx?source=bogus")
+    assert resp.status_code == 422
+
+
+def test_rare_dx_source_filter(client: TestClient):
+    """source=human filters out rbn-only calls (spot_b is rbn: G3XYZ/VK2YY)."""
+    resp = client.get("/api/top/rare-dx?source=human")
+    assert resp.status_code == 200
+    data = resp.json()
+    # spot_b is rbn source; with source=human only spot_a and spot_c remain
+    # Both are by K1ABC spotting JA1XX → only JA1XX appears with count=2
+    callsigns = {item["callsign"] for item in data}
+    assert "JA1XX" in callsigns
+    assert "VK2YY" not in callsigns
+
+
+def test_rare_dx_limit_param(client: TestClient):
+    resp = client.get("/api/top/rare-dx?limit=1")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) <= 1
+
+
+# ---------------------------------------------------------------------------
+# Callsign detail
+# ---------------------------------------------------------------------------
+
+def test_callsign_detail_returns_dict(client: TestClient):
+    resp = client.get("/api/callsign/K1ABC")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, dict)
+    assert set(data.keys()) == {"callsign", "as_spotter", "as_dx", "recent"}
+
+
+def test_callsign_detail_callsign_uppercased(client: TestClient):
+    resp = client.get("/api/callsign/k1abc")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["callsign"] == "K1ABC"
+
+
+def test_callsign_detail_k1abc_counts(client: TestClient):
+    """In seeded repo: K1ABC spots spot_a and spot_c → as_spotter=2, as_dx=0."""
+    resp = client.get("/api/callsign/K1ABC")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["as_spotter"] == 2
+    assert data["as_dx"] == 0
+
+
+def test_callsign_detail_ja1xx_counts(client: TestClient):
+    """JA1XX is dx in spot_a and spot_c → as_dx=2, as_spotter=0."""
+    resp = client.get("/api/callsign/JA1XX")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["as_dx"] == 2
+    assert data["as_spotter"] == 0
+
+
+def test_callsign_detail_recent_newest_first(client: TestClient):
+    """recent entries must be sorted newest first."""
+    resp = client.get("/api/callsign/K1ABC")
+    assert resp.status_code == 200
+    recent = resp.json()["recent"]
+    if len(recent) > 1:
+        ts_list = [r["ts"] for r in recent]
+        assert ts_list == sorted(ts_list, reverse=True)
+
+
+def test_callsign_detail_recent_fields(client: TestClient):
+    """Each recent entry must have the required fields."""
+    resp = client.get("/api/callsign/K1ABC")
+    assert resp.status_code == 200
+    recent = resp.json()["recent"]
+    for entry in recent:
+        assert "ts" in entry
+        assert "spotter" in entry
+        assert "dx_call" in entry
+        assert "freq_khz" in entry
+        assert "band" in entry
+        assert "mode" in entry
+        assert "source" in entry
+
+
+def test_callsign_detail_no_spots_returns_zeros_empty(client: TestClient):
+    """A callsign with no spots returns zeros and an empty recent list."""
+    resp = client.get("/api/callsign/XX0NOBODY")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["callsign"] == "XX0NOBODY"
+    assert data["as_spotter"] == 0
+    assert data["as_dx"] == 0
+    assert data["recent"] == []
+
+
+# ---------------------------------------------------------------------------
 # Connected users
 # ---------------------------------------------------------------------------
 

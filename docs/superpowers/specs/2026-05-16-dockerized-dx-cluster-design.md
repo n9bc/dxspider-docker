@@ -68,8 +68,9 @@ stats-svc backfill → dxspider spot files (read-only, first boot)
 - Line parsers produce normalized records. Every spot tagged
   `source = human | rbn` (RBN detected from spotter-of-spotter `-#`/skimmer
   comment markers and the RBN comment grammar).
-- Periodic `show/users` poll (`USERS_POLL_SECONDS`, default 20s) → replace the
-  connected-users snapshot table.
+- Periodic `show/users` poll (`USERS_POLL_SECONDS`, default 20s; implemented
+  env var is `DX_USERS_POLL_SECONDS`) → replace the connected-users snapshot
+  table.
 - Reconnect with exponential backoff + jitter; on first boot, optional
   one-time backfill reading existing DXSpider spot files into Postgres so
   charts are not empty (`BACKFILL_ON_START`, default true).

@@ -99,6 +99,36 @@ async def test_process_lines_two_spots_inserted_and_broadcast():
 
 
 @pytest.mark.asyncio
+async def test_process_lines_duplicate_spot_not_reinserted_or_rebroadcast():
+    """Feeding the same spot line twice results in exactly 1 insert and 1 broadcast.
+
+    The ingestor now calls insert_spot_dedup; the second occurrence of an
+    identical (ts, spotter, dx_call, freq_khz) must be silently dropped — no
+    second row in the repo and no second broadcast event.
+    """
+    from app.ingestor import Ingestor
+
+    repo = MemoryRepo()
+    hub = FakeHub()
+    settings = _make_settings()
+    fixed_ts = dt.datetime(2024, 1, 1, 12, 0, 0, tzinfo=dt.timezone.utc)
+    ingestor = Ingestor(settings, repo, hub, clock=lambda: fixed_ts)
+
+    spot_line = "DX de K1ABC:     14025.0  JA1XYZ       CW 599 up 2          1234Z"
+
+    # Feed the same line twice
+    await ingestor.process_lines(_lines(spot_line, spot_line))
+
+    # Only 1 row inserted (dedup dropped the second)
+    assert await repo.spot_count() == 1
+
+    # Only 1 spot broadcast (duplicate suppressed)
+    spot_events = [e for e in hub.events if e["type"] == "spot"]
+    assert len(spot_events) == 1
+    assert spot_events[0]["data"]["dx_call"] == "JA1XYZ"
+
+
+@pytest.mark.asyncio
 async def test_process_lines_no_hub_does_not_raise():
     """When hub=None, process_lines still inserts spots without crashing."""
     from app.ingestor import Ingestor

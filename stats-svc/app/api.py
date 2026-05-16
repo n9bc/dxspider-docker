@@ -174,6 +174,21 @@ def create_app(repo: Repo) -> FastAPI:
     ) -> list[dict[str, Any]]:
         return await aggregate.top_dx(repo, source=source.value, limit=limit, hours=hours)
 
+    @app.get("/api/top/rare-dx")
+    async def rare_dx(
+        source: Source = Query(Source.both),
+        hours: int = Query(24, ge=1, le=168),
+        limit: int = Query(10, ge=1, le=100),
+    ) -> list[dict[str, Any]]:
+        return await aggregate.rare_dx(repo, source=source.value, hours=hours, limit=limit)
+
+    @app.get("/api/callsign/{call}")
+    async def callsign_detail(
+        call: str,
+        hours: int = Query(168, ge=1, le=720),
+    ) -> dict[str, Any]:
+        return await aggregate.callsign_detail(repo, call, hours=hours)
+
     @app.get("/api/users")
     async def users() -> dict[str, Any]:
         return await aggregate.connected(repo)

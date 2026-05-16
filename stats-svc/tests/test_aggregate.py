@@ -83,6 +83,8 @@ from app.aggregate import (
     geo_breakdown,
     top_spotters,
     top_dx,
+    rare_dx,
+    callsign_detail,
     connected,
 )
 
@@ -711,3 +713,211 @@ class TestConnected:
         r = MemoryRepo()
         result = await connected(r)
         assert result == {"count": 0, "users": []}
+
+
+# ---------------------------------------------------------------------------
+# rare_dx
+# ---------------------------------------------------------------------------
+#
+# Spot inventory for reference (dx_call counts, all sources, 24h window):
+#   JA1XX: 5 (A,C,F,J,K)
+#   VK2YY: 3 (B,G,M)
+#   EA8ZZ: 3 (D,I,N)
+#   PY3QQ: 2 (E,L)
+#   DX1AAA: 1 (H)
+# Ascending by count then callsign:
+#   DX1AAA=1, PY3QQ=2, EA8ZZ=3, VK2YY=3, JA1XX=5
+
+class TestRareDx:
+    """rare_dx returns least-spotted DX calls ascending by count then callsign."""
+
+    @pytest.mark.asyncio
+    async def test_shape(self):
+        r = await _make_repo()
+        result = await rare_dx(r, _now=_NOW)
+        assert isinstance(result, list)
+        for item in result:
+            assert set(item.keys()) == {"callsign", "count"}
+            assert isinstance(item["callsign"], str)
+            assert isinstance(item["count"], int)
+
+    @pytest.mark.asyncio
+    async def test_ascending_order(self):
+        """Results must be ascending by count (rarest first)."""
+        r = await _make_repo()
+        result = await rare_dx(r, limit=10, _now=_NOW)
+        counts = [item["count"] for item in result]
+        assert counts == sorted(counts)
+
+    @pytest.mark.asyncio
+    async def test_all_sources_counts(self):
+        """DX1AAA=1 must be first (rarest); JA1XX=5 last in the ascending list."""
+        r = await _make_repo()
+        result = await rare_dx(r, limit=10, _now=_NOW)
+        d = {item["callsign"]: item["count"] for item in result}
+        assert d["DX1AAA"] == 1
+        assert d["PY3QQ"] == 2
+        assert d["EA8ZZ"] == 3
+        assert d["VK2YY"] == 3
+        assert d["JA1XX"] == 5
+        # Rarest first
+        assert result[0]["callsign"] == "DX1AAA"
+
+    @pytest.mark.asyncio
+    async def test_limit_applied(self):
+        r = await _make_repo()
+        result = await rare_dx(r, limit=2, _now=_NOW)
+        assert len(result) == 2
+        # Should be the 2 rarest: DX1AAA=1, PY3QQ=2
+        callsigns = {item["callsign"] for item in result}
+        assert "DX1AAA" in callsigns
+        assert "PY3QQ" in callsigns
+
+    @pytest.mark.asyncio
+    async def test_source_filter_human(self):
+        """Human only dx_call counts: JA1XX=3(A,C,J), EA8ZZ=2(D,I), VK2YY=1(B),
+        DX1AAA=1(H), PY3QQ=1(E). Ascending: DX1AAA=1, PY3QQ=1, VK2YY=1 (ties by callsign),
+        EA8ZZ=2, JA1XX=3."""
+        r = await _make_repo()
+        result = await rare_dx(r, source="human", limit=10, _now=_NOW)
+        d = {item["callsign"]: item["count"] for item in result}
+        assert d["JA1XX"] == 3
+        assert d["EA8ZZ"] == 2
+        assert d["VK2YY"] == 1
+        assert d["DX1AAA"] == 1
+        assert d["PY3QQ"] == 1
+        # All counts ascending
+        counts = [item["count"] for item in result]
+        assert counts == sorted(counts)
+
+    @pytest.mark.asyncio
+    async def test_source_filter_rbn(self):
+        """RBN only: JA1XX=2(F,K), VK2YY=2(G,M), EA8ZZ=1(N), PY3QQ=1(L).
+        Ascending: EA8ZZ=1, PY3QQ=1, JA1XX=2, VK2YY=2."""
+        r = await _make_repo()
+        result = await rare_dx(r, source="rbn", limit=10, _now=_NOW)
+        d = {item["callsign"]: item["count"] for item in result}
+        assert d["JA1XX"] == 2
+        assert d["VK2YY"] == 2
+        assert d["EA8ZZ"] == 1
+        assert d["PY3QQ"] == 1
+        counts = [item["count"] for item in result]
+        assert counts == sorted(counts)
+
+    @pytest.mark.asyncio
+    async def test_empty_repo(self):
+        r = MemoryRepo()
+        result = await rare_dx(r, _now=_NOW)
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
+# callsign_detail
+# ---------------------------------------------------------------------------
+#
+# Using _make_repo() seeded spots:
+#   K1ABC as spotter: A(_T0), B(_T0), H(_T2), J(_T2) → 4 spots as spotter
+#   K1ABC as dx: none (K1ABC never appears as dx_call in the seed data)
+#   JA1XX as dx: A,C,F,J,K → 5 spots as dx; as spotter: 0
+#   RBN1 as spotter: F(_T1), K(_T2), L(_T2) → 3 as spotter; as dx: 0
+#
+# _NOW = _H2.replace(minute=59) = 15:59 UTC
+# default hours=168 for callsign_detail (1 week), _T0/_T1/_T2 are all within 3h
+
+class TestCallsignDetail:
+    """callsign_detail returns per-callsign spotter/dx counts and recent spots."""
+
+    @pytest.mark.asyncio
+    async def test_shape(self):
+        r = await _make_repo()
+        result = await callsign_detail(r, "K1ABC", _now=_NOW)
+        assert isinstance(result, dict)
+        assert set(result.keys()) == {"callsign", "as_spotter", "as_dx", "recent"}
+        assert isinstance(result["as_spotter"], int)
+        assert isinstance(result["as_dx"], int)
+        assert isinstance(result["recent"], list)
+
+    @pytest.mark.asyncio
+    async def test_callsign_uppercased(self):
+        r = await _make_repo()
+        result = await callsign_detail(r, "k1abc", _now=_NOW)
+        assert result["callsign"] == "K1ABC"
+
+    @pytest.mark.asyncio
+    async def test_k1abc_as_spotter_count(self):
+        """K1ABC appears as spotter in spots A,B,H,J → as_spotter=4."""
+        r = await _make_repo()
+        result = await callsign_detail(r, "K1ABC", _now=_NOW)
+        assert result["as_spotter"] == 4
+
+    @pytest.mark.asyncio
+    async def test_k1abc_as_dx_count(self):
+        """K1ABC never appears as dx_call in seed data → as_dx=0."""
+        r = await _make_repo()
+        result = await callsign_detail(r, "K1ABC", _now=_NOW)
+        assert result["as_dx"] == 0
+
+    @pytest.mark.asyncio
+    async def test_ja1xx_as_dx_count(self):
+        """JA1XX appears as dx_call in A,C,F,J,K → as_dx=5."""
+        r = await _make_repo()
+        result = await callsign_detail(r, "JA1XX", _now=_NOW)
+        assert result["as_dx"] == 5
+
+    @pytest.mark.asyncio
+    async def test_ja1xx_as_spotter_count(self):
+        """JA1XX never spots in seed data → as_spotter=0."""
+        r = await _make_repo()
+        result = await callsign_detail(r, "JA1XX", _now=_NOW)
+        assert result["as_spotter"] == 0
+
+    @pytest.mark.asyncio
+    async def test_recent_newest_first(self):
+        """Recent spots must be sorted newest first (descending ts)."""
+        r = await _make_repo()
+        result = await callsign_detail(r, "K1ABC", _now=_NOW)
+        recent = result["recent"]
+        assert len(recent) > 1
+        ts_list = [item["ts"] for item in recent]
+        # All ts strings; check descending order
+        assert ts_list == sorted(ts_list, reverse=True)
+
+    @pytest.mark.asyncio
+    async def test_recent_max_25(self):
+        """recent list is capped at 25 entries."""
+        r = MemoryRepo()
+        # Insert 30 spots for the same callsign
+        base_ts = dt.datetime(2026, 5, 16, 10, 0, 0, tzinfo=dt.timezone.utc)
+        for i in range(30):
+            ts = base_ts + dt.timedelta(minutes=i)
+            await r.insert_spot(_spot(spotter="ZZ9ZZZ", dx_call="JA1XX"), ts)
+        result = await callsign_detail(r, "ZZ9ZZZ", _now=base_ts + dt.timedelta(hours=2))
+        assert len(result["recent"]) == 25
+
+    @pytest.mark.asyncio
+    async def test_recent_fields(self):
+        """Each recent entry has the required fields."""
+        r = await _make_repo()
+        result = await callsign_detail(r, "K1ABC", _now=_NOW)
+        for entry in result["recent"]:
+            assert set(entry.keys()) == {"ts", "spotter", "dx_call", "freq_khz", "band", "mode", "source"}
+
+    @pytest.mark.asyncio
+    async def test_window_filter(self):
+        """Spots outside the hours window are excluded."""
+        r = await _make_repo()
+        # Use hours=1: only _T2 spots (at 15:30) fall in [14:59, 15:59)
+        # _NOW = 15:59, since = 14:59, _T2 = 15:30 → inside; _T1=14:30 → outside
+        result = await callsign_detail(r, "K1ABC", hours=1, _now=_NOW)
+        # K1ABC spots in last hour: H and J (both at _T2=15:30)
+        assert result["as_spotter"] == 2
+
+    @pytest.mark.asyncio
+    async def test_unknown_callsign_returns_zeros_empty(self):
+        """A callsign with no spots returns zeros and empty recent list."""
+        r = await _make_repo()
+        result = await callsign_detail(r, "XX0UNKNOWN", _now=_NOW)
+        assert result["callsign"] == "XX0UNKNOWN"
+        assert result["as_spotter"] == 0
+        assert result["as_dx"] == 0
+        assert result["recent"] == []
