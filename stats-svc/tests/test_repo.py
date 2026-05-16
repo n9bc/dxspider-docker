@@ -44,3 +44,16 @@ async def test_backfill_dedup_skips_duplicate():
     assert await r.insert_spot_dedup(s, ts) is True
     assert await r.insert_spot_dedup(s, ts) is False
     assert await r.spot_count() == 1
+
+async def test_rollup_coalesces_none_keys():
+    r = MemoryRepo()
+    ts = dt.datetime(2026,5,16,12,0, tzinfo=dt.timezone.utc)
+    await r.insert_spot(_spot(band=None, mode=None, dx_dxcc=None,
+                              dx_continent=None, spotter_dxcc=None), ts)
+    await r.insert_spot(_spot(band=None, mode=None, dx_dxcc=None,
+                              dx_continent=None, spotter_dxcc=None),
+                        dt.datetime(2026,5,16,12,30, tzinfo=dt.timezone.utc))
+    rows = await r.rollup_rows()
+    merged = [x for x in rows if x["hour_ts"]==ts and x["band"]==""
+              and x["dx_dxcc"]==""]
+    assert len(merged) == 1 and merged[0]["count"] == 2

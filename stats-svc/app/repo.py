@@ -122,12 +122,12 @@ class MemoryRepo(Repo):
     def _update_rollup(self, spot: SpotRecord, ts: dt.datetime) -> None:
         key = (
             self._hour_ts(ts),
-            spot.band,
-            spot.mode,
+            spot.band or "",
+            spot.mode or "",
             spot.source,
-            spot.dx_dxcc,
-            spot.dx_continent,
-            spot.spotter_dxcc,
+            spot.dx_dxcc or "",
+            spot.dx_continent or "",
+            spot.spotter_dxcc or "",
         )
         self._rollup[key] = self._rollup.get(key, 0) + 1
 

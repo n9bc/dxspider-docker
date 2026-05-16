@@ -68,12 +68,12 @@ CREATE TABLE IF NOT EXISTS connected_users (
 
 CREATE TABLE IF NOT EXISTS spot_rollup_hourly (
     hour_ts      TIMESTAMPTZ NOT NULL,
-    band         TEXT,
-    mode         TEXT,
+    band         TEXT        NOT NULL DEFAULT '',
+    mode         TEXT        NOT NULL DEFAULT '',
     source       TEXT        NOT NULL,
-    dx_dxcc      TEXT,
-    dx_continent TEXT,
-    spotter_dxcc TEXT,
+    dx_dxcc      TEXT        NOT NULL DEFAULT '',
+    dx_continent TEXT        NOT NULL DEFAULT '',
+    spotter_dxcc TEXT        NOT NULL DEFAULT '',
     count        BIGINT      NOT NULL DEFAULT 0,
     PRIMARY KEY (hour_ts, band, mode, source, dx_dxcc, dx_continent, spotter_dxcc)
 );
@@ -162,7 +162,7 @@ class PgRepo(Repo):
             """
             INSERT INTO spot_rollup_hourly
                 (hour_ts, band, mode, source, dx_dxcc, dx_continent, spotter_dxcc, count)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,1)
+            VALUES ($1, COALESCE($2,''), COALESCE($3,''), $4, COALESCE($5,''), COALESCE($6,''), COALESCE($7,''), 1)
             ON CONFLICT (hour_ts, band, mode, source, dx_dxcc, dx_continent, spotter_dxcc)
             DO UPDATE SET count = spot_rollup_hourly.count + 1
             """,
