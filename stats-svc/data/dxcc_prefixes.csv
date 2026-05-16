@@ -1,0 +1,339 @@
+prefix,entity,continent,cq_zone
+AA,United States,NA,5
+AB,United States,NA,5
+AC,United States,NA,5
+AD,United States,NA,5
+AE,United States,NA,5
+AF,United States,NA,5
+AG,United States,NA,5
+AI,United States,NA,5
+AJ,United States,NA,5
+AK,United States,NA,5
+K,United States,NA,5
+N,United States,NA,5
+W,United States,NA,5
+VE,Canada,NA,5
+VA,Canada,NA,5
+VY,Canada,NA,5
+VY0,Nunavut,NA,4
+XE,Mexico,NA,6
+XF,Mexico,NA,6
+TI,Costa Rica,NA,7
+YN,Nicaragua,NA,7
+HR,Honduras,NA,7
+HQ,Honduras,NA,7
+YS,El Salvador,NA,7
+TG,Guatemala,NA,7
+HP,Panama,NA,7
+HH,Haiti,NA,8
+HI,Dominican Republic,NA,8
+CO,Cuba,NA,8
+CM,Cuba,NA,8
+KP4,Puerto Rico,NA,8
+KP2,Virgin Islands,NA,8
+VP9,Bermuda,NA,5
+VQ9,Chagos Islands,AF,39
+2E,England,EU,14
+2I,Northern Ireland,EU,14
+2M,Scotland,EU,14
+2W,Wales,EU,14
+G,England,EU,14
+GD,Isle of Man,EU,14
+GI,Northern Ireland,EU,14
+GJ,Jersey,EU,14
+GM,Scotland,EU,14
+GU,Guernsey,EU,14
+GW,Wales,EU,14
+M,England,EU,14
+DA,Germany,EU,14
+DB,Germany,EU,14
+DC,Germany,EU,14
+DD,Germany,EU,14
+DE,Germany,EU,14
+DF,Germany,EU,14
+DG,Germany,EU,14
+DH,Germany,EU,14
+DI,Germany,EU,14
+DJ,Germany,EU,14
+DK,Germany,EU,14
+DL,Germany,EU,14
+DM,Germany,EU,14
+DN,Germany,EU,14
+DO,Germany,EU,14
+DP,Germany,EU,14
+DQ,Germany,EU,14
+DR,Germany,EU,14
+F,France,EU,14
+TM,France,EU,14
+EA,Spain,EU,14
+EB,Spain,EU,14
+EC,Spain,EU,14
+ED,Spain,EU,14
+EE,Spain,EU,14
+EF,Spain,EU,14
+EG,Spain,EU,14
+EH,Spain,EU,14
+EA8,Canary Islands,AF,33
+I,Italy,EU,15
+IK,Italy,EU,15
+IN,Italy,EU,15
+IQ,Italy,EU,15
+IR,Italy,EU,15
+IU,Italy,EU,15
+IW,Italy,EU,15
+IZ,Italy,EU,15
+IS,Sardinia,EU,15
+IH,Italy,EU,15
+OE,Austria,EU,15
+HB,Switzerland,EU,14
+HB0,Liechtenstein,EU,14
+PA,Netherlands,EU,14
+PB,Netherlands,EU,14
+PC,Netherlands,EU,14
+PD,Netherlands,EU,14
+PE,Netherlands,EU,14
+PF,Netherlands,EU,14
+PG,Netherlands,EU,14
+PH,Netherlands,EU,14
+PI,Netherlands,EU,14
+ON,Belgium,EU,14
+OQ,Belgium,EU,14
+OO,Belgium,EU,14
+LX,Luxembourg,EU,14
+OZ,Denmark,EU,14
+5P,Denmark,EU,14
+SM,Sweden,EU,18
+SA,Sweden,EU,18
+SB,Sweden,EU,18
+SC,Sweden,EU,18
+SD,Sweden,EU,18
+SE,Sweden,EU,18
+SF,Sweden,EU,18
+SG,Sweden,EU,18
+SH,Sweden,EU,18
+SI,Sweden,EU,18
+SJ,Sweden,EU,18
+SK,Sweden,EU,18
+SL,Sweden,EU,18
+OH,Finland,EU,18
+OG,Finland,EU,18
+OF,Finland,EU,18
+LA,Norway,EU,18
+LB,Norway,EU,18
+LC,Norway,EU,18
+LD,Norway,EU,18
+LE,Norway,EU,18
+LF,Norway,EU,18
+LG,Norway,EU,18
+LH,Norway,EU,18
+LI,Norway,EU,18
+LJ,Norway,EU,18
+LK,Norway,EU,18
+LL,Norway,EU,18
+LM,Norway,EU,18
+LN,Norway,EU,18
+TF,Iceland,EU,17
+SP,Poland,EU,15
+SN,Poland,EU,15
+SQ,Poland,EU,15
+SR,Poland,EU,15
+OK,Czech Republic,EU,15
+OL,Czech Republic,EU,15
+OM,Slovakia,EU,15
+HA,Hungary,EU,15
+HG,Hungary,EU,15
+YU,Serbia,EU,15
+4N,Serbia,EU,15
+9A,Croatia,EU,15
+S5,Slovenia,EU,15
+OA,Peru,SA,10
+CP,Bolivia,SA,10
+LU,Argentina,SA,13
+AY,Argentina,SA,13
+PY,Brazil,SA,11
+PP,Brazil,SA,11
+PQ,Brazil,SA,11
+PR,Brazil,SA,11
+PS,Brazil,SA,11
+PT,Brazil,SA,11
+PU,Brazil,SA,11
+PV,Brazil,SA,11
+PW,Brazil,SA,11
+PX,Brazil,SA,11
+CX,Uruguay,SA,13
+CE,Chile,SA,12
+XR,Chile,SA,12
+HK,Colombia,SA,9
+5J,Colombia,SA,9
+YV,Venezuela,SA,9
+4M,Venezuela,SA,9
+VP8,Falkland Islands,SA,13
+CE9,Antarctica,AN,38
+DP0,Antarctica,AN,38
+
+JA,Japan,AS,25
+JB,Japan,AS,25
+JC,Japan,AS,25
+JD,Japan,AS,25
+JE,Japan,AS,25
+JF,Japan,AS,25
+JG,Japan,AS,25
+JH,Japan,AS,25
+JI,Japan,AS,25
+JJ,Japan,AS,25
+JK,Japan,AS,25
+JL,Japan,AS,25
+JM,Japan,AS,25
+JN,Japan,AS,25
+JO,Japan,AS,25
+JP,Japan,AS,25
+JQ,Japan,AS,25
+JR,Japan,AS,25
+JS,Japan,AS,25
+7J,Japan,AS,25
+7K,Japan,AS,25
+7L,Japan,AS,25
+7M,Japan,AS,25
+7N,Japan,AS,25
+UA,European Russia,EU,16
+UB,European Russia,EU,16
+UC,European Russia,EU,16
+UD,European Russia,EU,16
+UE,European Russia,EU,16
+UF,European Russia,EU,16
+UG,European Russia,EU,16
+UH,European Russia,EU,16
+UI,European Russia,EU,16
+R,European Russia,EU,16
+RA,European Russia,EU,16
+RB,European Russia,EU,16
+RC,European Russia,EU,16
+RD,European Russia,EU,16
+RE,European Russia,EU,16
+RF,European Russia,EU,16
+RG,European Russia,EU,16
+RH,European Russia,EU,16
+RI,European Russia,EU,16
+RJ,European Russia,EU,16
+RK,European Russia,EU,16
+RL,European Russia,EU,16
+RM,European Russia,EU,16
+RN,European Russia,EU,16
+RO,European Russia,EU,16
+RP,European Russia,EU,16
+RQ,European Russia,EU,16
+RR,European Russia,EU,16
+RS,European Russia,EU,16
+RT,European Russia,EU,16
+RU,European Russia,EU,16
+RV,European Russia,EU,16
+RW,European Russia,EU,16
+RX,European Russia,EU,16
+RY,European Russia,EU,16
+RZ,European Russia,EU,16
+UA9,Asiatic Russia,AS,17
+UA0,Asiatic Russia,AS,19
+VK,Australia,OC,30
+VK9X,Christmas Island,OC,29
+VK9C,Cocos-Keeling Islands,OC,29
+VK9M,Mellish Reef,OC,30
+VK9N,Norfolk Island,OC,32
+VK9W,Willis Island,OC,30
+VK9L,Lord Howe Island,OC,30
+ZL,New Zealand,OC,32
+ZM,New Zealand,OC,32
+ZL7,Chatham Islands,OC,32
+ZL8,Kermadec Islands,OC,32
+ZL9,Campbell Island,OC,32
+9M,West Malaysia,AS,28
+9M2,West Malaysia,AS,28
+9M6,East Malaysia,OC,28
+9M8,East Malaysia,OC,28
+HS,Thailand,AS,26
+E2,Thailand,AS,26
+BY,China,AS,24
+BA,China,AS,24
+BG,China,AS,24
+BH,China,AS,24
+BT,China,AS,24
+BV,Taiwan,AS,24
+VU,India,AS,26
+AT,India,AS,26
+AP,Pakistan,AS,21
+ZC4,UK Cyprus,AS,20
+5B,Cyprus,AS,20
+OD,Lebanon,AS,20
+YK,Syria,AS,20
+YI,Iraq,AS,21
+4X,Israel,AS,20
+4Z,Israel,AS,20
+A4,Oman,AS,21
+A9,Bahrain,AS,21
+A6,United Arab Emirates,AS,21
+9K,Kuwait,AS,21
+HZ,Saudi Arabia,AS,21
+7Z,Saudi Arabia,AS,21
+8Z,Saudi Arabia,AS,21
+ZA,Albania,EU,15
+HA8,Hungary,EU,15
+YO,Romania,EU,20
+YP,Romania,EU,20
+YQ,Romania,EU,20
+YR,Romania,EU,20
+LZ,Bulgaria,EU,20
+ZC,Bulgaria,EU,20
+SV,Greece,EU,20
+J4,Greece,EU,20
+CT,Portugal,EU,14
+CR,Portugal,EU,14
+CS,Portugal,EU,14
+CU,Azores,EU,14
+CT2,Azores,EU,14
+EI,Ireland,EU,14
+EJ,Ireland,EU,14
+ZB,Gibraltar,EU,14
+C3,Andorra,EU,14
+3A,Monaco,EU,14
+FS,Saint Martin,NA,8
+PJ7,Sint Maarten,NA,8
+PJ5,Saba & Saint Eustatius,NA,8
+PJ6,Saba & Saint Eustatius,NA,8
+FG,Guadeloupe,NA,8
+FM,Martinique,NA,8
+FJ,Saint Barthelemy,NA,8
+ZS,South Africa,AF,38
+ZT,South Africa,AF,38
+ZU,South Africa,AF,38
+V5,Namibia,AF,38
+A2,Botswana,AF,38
+Z2,Zimbabwe,AF,38
+ZE,Zimbabwe,AF,38
+C9,Mozambique,AF,37
+7Q,Malawi,AF,37
+5H,Tanzania,AF,37
+5I,Tanzania,AF,37
+EX,Kyrgyzstan,AS,17
+UK,Uzbekistan,AS,17
+EY,Tajikistan,AS,17
+EZ,Turkmenistan,AS,21
+UN,Kazakhstan,AS,17
+UP,Kazakhstan,AS,17
+UQ,Kazakhstan,AS,17
+UR,Ukraine,EU,16
+US,Ukraine,EU,16
+UT,Ukraine,EU,16
+UU,Ukraine,EU,16
+UV,Ukraine,EU,16
+UW,Ukraine,EU,16
+UX,Ukraine,EU,16
+UY,Ukraine,EU,16
+UZ,Ukraine,EU,16
+EM,Ukraine,EU,16
+EN,Ukraine,EU,16
+EO,Ukraine,EU,16
+EU,Belarus,EU,16
+EV,Belarus,EU,16
+EW,Belarus,EU,16
+YL,Latvia,EU,15
+LY,Lithuania,EU,15
+ES,Estonia,EU,15
