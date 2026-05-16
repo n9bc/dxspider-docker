@@ -6,3 +6,6 @@ __pycache__/
 caddy_data/
 postgres_data/
 node_modules/
+
+# Local Claude Code harness settings (not for publication)
+.claude/
