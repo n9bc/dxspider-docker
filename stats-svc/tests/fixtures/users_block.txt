@@ -1,0 +1,19 @@
+# DXSpider show/users output fixture
+# Layout: callsign  type  ip_or_address  uptime_or_other_fields
+# Parser reads data lines; skips lines starting with # or containing only dashes/=
+# or lines that look like headers (no uppercase callsign token).
+# Realistic DXSpider output (columns may vary in width; parser uses whitespace split).
+#
+# Format: callsign  conn_type  [additional fields...]
+# conn_type is the second whitespace-separated token on data lines.
+#
+show/users
+==========
+Callsign   Type    Address              Uptime
+--------   ----    -------              ------
+K1ABC      LOCAL   192.168.1.10         00:14:37
+G7XYZ      USER    10.0.0.23            01:02:55
+VK2DX      NODE    vk2dx.dxcluster.net  12:00:00
+OH6BG      USER    87.94.1.1            00:05:10
+W1AW       LOCAL   192.168.1.11         00:30:00
+DK0WCY     NODE    dk0wcy.darc.de       24:00:00
