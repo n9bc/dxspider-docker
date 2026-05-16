@@ -18,3 +18,18 @@ def test_mode_from_comment_keywords():
 def test_mode_falls_back_to_band_plan_segment():
     assert mode_for_khz_comment(14025.0, "") == "CW"
     assert mode_for_khz_comment(14250.0, "") == "SSB"
+
+def test_band_for_khz_boundaries():
+    assert band_for_khz(14000.0) == "20m"
+    assert band_for_khz(14350.0) is None
+    assert band_for_khz(29700.0) is None
+
+def test_psk31_not_shadowed_by_psk():
+    assert mode_for_khz_comment(14070.0, "PSK31 dx") == "PSK31"
+
+def test_usb_lsb_normalise_to_ssb():
+    assert mode_for_khz_comment(14200.0, "USB") == "SSB"
+    assert mode_for_khz_comment(7100.0, "LSB") == "SSB"
+
+def test_mode_returns_none_when_unclassifiable():
+    assert mode_for_khz_comment(12345.0, "") is None

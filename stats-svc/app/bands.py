@@ -22,18 +22,23 @@ _BANDS = [
 # Per-band sub-segment split: (low_khz, split_khz) — below split -> CW, above -> SSB
 # Split points follow IARU Region 1 band plan (phone segments start above CW/data segments)
 _BAND_SEGMENTS = {
-    "160m": (1800.0,  1838.0),
-    "80m":  (3500.0,  3600.0),
-    "40m":  (7000.0,  7040.0),
-    "30m":  (10100.0, 10150.0),   # 30m is CW/data only; treat all as CW
-    "20m":  (14000.0, 14150.0),
-    "17m":  (18068.0, 18110.0),
-    "15m":  (21000.0, 21150.0),
-    "12m":  (24890.0, 24930.0),
-    "10m":  (28000.0, 28300.0),
+    "160m": (1800.0,   1838.0),
+    "80m":  (3500.0,   3600.0),
+    "40m":  (7000.0,   7040.0),
+    "30m":  (10100.0,  10150.0),   # 30m is CW/data only; treat all as CW
+    "20m":  (14000.0,  14150.0),
+    "17m":  (18068.0,  18110.0),
+    "15m":  (21000.0,  21150.0),
+    "12m":  (24890.0,  24930.0),
+    "10m":  (28000.0,  28300.0),
+    "6m":   (50000.0,  50100.0),
+    "4m":   (70000.0,  70200.0),
+    "2m":   (144000.0, 144150.0),
+    "70cm": (430000.0, 432000.0),
 }
 
-# Mode keywords — ordered longest-first so longer tokens shadow shorter ones
+# Mode keywords — no keyword is a case-insensitive substring of another at a word boundary,
+# except PSK31 vs PSK: PSK31 must precede PSK so the longer token matches first
 _MODE_KEYWORDS = [
     ("PSK31", "PSK31"),
     ("RTTY",  "RTTY"),
@@ -81,7 +86,7 @@ def mode_for_khz_comment(khz: float, comment: str) -> "str | None":
     # 2. Sub-segment inference
     band = band_for_khz(khz)
     if band and band in _BAND_SEGMENTS:
-        low, split = _BAND_SEGMENTS[band]
+        _, split = _BAND_SEGMENTS[band]
         return "CW" if khz < split else "SSB"
 
     return None
