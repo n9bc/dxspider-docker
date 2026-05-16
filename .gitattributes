@@ -1,0 +1,7 @@
+# Keep LF for everything; container shell scripts and Dockerfiles require LF.
+* text=auto eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+Dockerfile text eol=lf
+*.png binary
+*.ico binary
