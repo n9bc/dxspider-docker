@@ -1,12 +1,51 @@
-# DX Cluster — Dockerized DXSpider + Stats Dashboard
+# DXSpider Docker
 
-A self-hosted amateur-radio DX cluster running as a four-service Docker Compose
-stack. DXSpider provides the cluster engine (telnet on port 7300, inter-cluster
-peering in Phase 2). A Python sidecar ingests the live spot stream, stores spots
-in Postgres, and serves a statistics dashboard with real-time charts and a live
-user panel.
+> A self-hosted amateur-radio DX cluster running as a four-service Docker Compose stack.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/tests-171%20passing-brightgreen.svg)](stats-svc/)
+[![Made with FastAPI](https://img.shields.io/badge/Made%20with-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
+
+**DXSpider** provides the cluster engine (telnet on port 7300, PC-protocol inter-cluster peering in Phase 2). A Python sidecar ingests the live spot stream, stores spots in Postgres, and serves a statistics dashboard with real-time charts and a live connected-users panel. Caddy handles TLS termination and reverse-proxying.
+
+Public repository: **https://github.com/n9bc/dxspider-docker**
+
+---
+
+## Status
+
+**v0.1.0** — initial release.
+
+- Python test suite (parsers, aggregation, API, WebSocket): **171 passing, 0 skipped**.
+- Container build and Compose integration are authored and peer-reviewed but **have not yet been brought up in a Docker environment** (the authoring host had no Docker). Bringing the stack up with `docker compose up -d` is the operator's first step; see the first-run checklist in [docs/deployment.md](docs/deployment.md) and [docs/troubleshooting.md](docs/troubleshooting.md). Docker-independent logic was fully tested locally with Python; container images pin Python 3.12.
+- See [VERIFICATION.md](VERIFICATION.md) for the full verification report.
+
+---
+
+## Features
+
+- **DXSpider telnet cluster node** — full DXSpider engine on port 7300; operators connect with any telnet client or logging software.
+- **Sysop web console** — ttyd wraps `console.pl` and is proxied by Caddy at `/cluster`; protected by HTTP basic auth.
+- **Live stats dashboard** — single-page HTML/ECharts dashboard served by FastAPI at `/`:
+  - Activity over time (spots per hour/day, up to last 168 h)
+  - Band and mode distribution (pie/bar charts)
+  - Geographic breakdown — top DX entities, top spotting entities, by continent
+  - Top spotters and most-spotted DX leaderboards
+  - Rare-DX highlights
+  - Per-callsign drill-down
+  - Human / RBN source filter on every chart
+- **WebSocket live ticker** — new spots and connected-users snapshots pushed to every open browser tab in real time.
+- **Spot ingestion** — persistent telnet monitor session; every spot tagged `source=human` or `source=rbn` at ingest time; frequency mapped to band + mode; callsign prefix resolved to DXCC entity + continent.
+- **Connected-users panel** — `show/users` polled every 20 s (configurable); live count displayed on the dashboard.
+- **Optional first-boot backfill** — reads existing CSV/TSV `*.spots` files from the shared `dxspider-data` volume on first start (`DX_BACKFILL_ON_START=true`). Note: DXSpider's native Perl/Data::Dumper spot-file format is not parsed in v1; backfill is a no-op on a fresh or native-format data volume (Phase 2 item). Charts populate from the live ingestor from the moment the stack starts.
+- **Automatic TLS** — Caddy obtains and renews Let's Encrypt certificates automatically when `DOMAIN` is set to a real FQDN.
+
+---
 
 ## Architecture
+
+Four-service Docker Compose stack (`docker-compose.yml`):
 
 ```
                            ┌─────────────────────────────────────────┐
@@ -36,14 +75,25 @@ user panel.
                            └─────────────────────────────────────────┘
 
 Data flows:
-  caddy → stats-svc:8000          Dashboard and API (all paths except /cluster)
-  caddy → dxspider:8080           Sysop web console via ttyd (path /cluster)
-  stats-svc ingestor → dxspider:7300 → postgres   Live spot ingestion
-  stats-svc backfill ← dxspider-data (read-only)  First-boot history load
-  ham operators → host:7300 → dxspider            Telnet cluster access
+  caddy → stats-svc:8000          Dashboard and API  (all paths except /cluster)
+  caddy → dxspider:8080           Sysop web console  (/cluster* via ttyd)
+  stats-svc ingestor → dxspider:7300 → postgres      Live spot ingestion
+  stats-svc backfill ← dxspider-data (read-only)     First-boot history load
+  ham operators → host:7300 → dxspider               Telnet cluster access
 ```
 
-## Quick start
+Services at a glance:
+
+| Service | Image | Role |
+|---------|-------|------|
+| `dxspider` | Custom (Debian slim + Perl) | DXSpider engine + ttyd sysop console |
+| `stats-svc` | Custom (Python 3.12) | Telnet ingestor + FastAPI dashboard |
+| `postgres` | `postgres:16` | Durable spot and user store |
+| `caddy` | `caddy:2.8` | TLS termination + reverse proxy |
+
+---
+
+## Quick Start
 
 ### Prerequisites
 
@@ -54,17 +104,18 @@ Data flows:
 ### Steps
 
 ```bash
-# 1. Clone the repo (if you haven't already)
-git clone https://github.com/your-org/dxcluster.git
-cd dxcluster
+# 1. Clone
+git clone https://github.com/n9bc/dxspider-docker.git
+cd dxspider-docker
 
 # 2. Create your local env file
 cp .env.example .env
 
 # 3. Edit .env — at minimum set:
-#      NODE_CALL, SYSOP_CALL, SYSOP_NAME, LOCATOR, NODE_QTH
-#      TTYD_PASSWORD, DX_MONITOR_PASSWORD, POSTGRES_PASSWORD + DX_DB_DSN
-#      DOMAIN (leave as localhost for local testing)
+#    NODE_CALL, SYSOP_CALL, SYSOP_NAME, LOCATOR, NODE_QTH
+#    TTYD_PASSWORD, DX_MONITOR_PASSWORD
+#    POSTGRES_PASSWORD  (and update DX_DB_DSN to match)
+#    DOMAIN  (leave as "localhost" for local testing)
 nano .env   # or your editor of choice
 
 # 4. Build images and start the stack
@@ -72,189 +123,91 @@ docker compose up -d --build
 
 # 5. Watch logs until all services are healthy
 docker compose logs -f
+docker compose ps
 ```
 
-The first build clones DXSpider source from GitHub and may take 2–3 minutes
-depending on network speed.
+The first build clones DXSpider source from GitHub and may take 2–3 minutes depending on network speed.
 
 ### URLs
 
 | What | URL |
-|---|---|
+|------|-----|
 | Stats dashboard | `http(s)://DOMAIN/` |
 | Sysop web console | `http(s)://DOMAIN/cluster` |
 | Telnet cluster access | `telnet DOMAIN 7300` |
 
-Replace `DOMAIN` with the value you set in `.env` (e.g., `localhost` for local
-testing, or your public FQDN when `DOMAIN` is set for auto-TLS).
+Replace `DOMAIN` with the value set in `.env` (`localhost` for local testing, or your public FQDN when auto-TLS is enabled).
 
-### Verifying the stack is up
+### Quick smoke test
 
 ```bash
 # All four services should show "healthy" or "running"
 docker compose ps
 
-# Quick API health check
+# API health check
 curl http://localhost/api/health
 
-# Telnet smoke test
+# Telnet
 telnet localhost 7300
 ```
 
-## How stats ingestion works
+---
 
-`stats-svc` contains two cooperating components running in a single container:
+## Documentation
 
-1. **Ingestor** — maintains a persistent telnet connection to DXSpider as the
-   `DX_MONITOR_USER` account. It sets a wide filter to receive all DX spots,
-   announcements, and WWV/WCY bulletins. Each line is parsed and normalized:
-   - Frequency → band + mode (from a bundled lookup table)
-   - Callsign prefix → DXCC entity + continent
-   - Spotter signature → `source=human` or `source=rbn` (RBN skimmers are
-     detected from comment markers and spotter patterns)
-   - Normalized records are written to the `spots` table in Postgres.
-   - Every `DX_USERS_POLL_SECONDS` seconds (default: 20), `show/users` is
-     sent and the `connected_users` snapshot table is replaced.
+Full technical documentation lives under `docs/`. The files listed below are being written as part of this release; link here for orientation and detail.
 
-2. **Web server** — FastAPI serves the stats dashboard as a single HTML page
-   with ECharts charts. All chart data comes from REST endpoints that query
-   Postgres aggregates. A WebSocket endpoint pushes new spots and user
-   snapshots to connected browsers in real time.
+| Document | Contents |
+|----------|----------|
+| [docs/architecture.md](docs/architecture.md) | Container design, volumes, networking, data model |
+| [docs/configuration.md](docs/configuration.md) | All `.env` variables with defaults and guidance |
+| [docs/deployment.md](docs/deployment.md) | Step-by-step bring-up, TLS, firewall, first-run checklist |
+| [docs/operations.md](docs/operations.md) | Backup, restore, upgrades, log management |
+| [docs/development.md](docs/development.md) | Dev environment, running tests, project layout |
+| [docs/api.md](docs/api.md) | REST and WebSocket endpoint reference |
+| [docs/dashboard.md](docs/dashboard.md) | Dashboard views, filters, chart descriptions |
+| [docs/dxspider.md](docs/dxspider.md) | DXSpider configuration, source/version, ttyd console |
+| [docs/troubleshooting.md](docs/troubleshooting.md) | Common first-run problems and resolutions |
+| [docs/phase-2.md](docs/phase-2.md) | Partner peering, RBN aggregator — config-gated Phase 2 |
 
-**Backfill:** On first start (if `DX_BACKFILL_ON_START=true`), the ingestor
-scans DXSpider's spot-file directory from the shared `dxspider-data` volume
-before connecting to the telnet stream. See note (d) below for an important
-caveat about native DXSpider spot-file format support in v1.
+---
 
-## Known integration notes — verify on first real run
+## Tech Stack
 
-### (a) DX_MONITOR_USER must be callsign-shaped
+| Layer | Technology |
+|-------|-----------|
+| Cluster engine | DXSpider (EA3CV `mojo` fork, Perl) |
+| Sysop console | ttyd 1.7.7 |
+| Ingestor + API | Python 3.12, FastAPI 0.115, asyncpg 0.30, uvicorn 0.34 |
+| Charts | Apache ECharts (browser, no build step) |
+| Database | PostgreSQL 16 |
+| Reverse proxy / TLS | Caddy 2.8 (automatic Let's Encrypt) |
+| Container runtime | Docker Engine 24+, Compose v2 |
+| Tests | pytest 8.3.4, pytest-asyncio 0.25, httpx 0.28 |
 
-DXSpider validates telnet logins against its internal user database by
-callsign. The default value `statsmon` is not a valid callsign and may be
-rejected by some DXSpider versions with a "not a valid callsign" error.
+---
 
-**Resolution:** Set `DX_MONITOR_USER` in `.env` to a callsign-shaped value
-(for example `N0CALL-9`, using an SSID you do not use on air) and register
-that user in DXSpider before or immediately after first boot:
+## Contributing
 
-```bash
-# Inside the dxspider container (after it is running)
-docker compose exec dxspider perl /spider/perl/create_user.pl N0CALL-9
-```
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, the TDD expectation, and PR conventions.
 
-Or use the sysop web console at `/cluster` to create the user interactively.
+---
 
-### (b) DXVars.pm required fields
+## Security
 
-The required fields in `DXVars.pm` are verified against the cloned EA3CV mojo
-source on first build. If the build fails with a Perl error referencing a
-missing or mismatched variable, check `/spider/local/DXVars.pm` against the
-template in `dxspider/templates/DXVars.pm.tmpl` and the DXSpider source.
+See [SECURITY.md](SECURITY.md) for the project's security posture, supported versions, and how to report a vulnerability privately.
 
-### (c) ttyd version and architecture
+**Before exposing your node to the internet:** change every default password in `.env` (`TTYD_PASSWORD`, `DX_MONITOR_PASSWORD`, `POSTGRES_PASSWORD` / `DX_DB_DSN`).
 
-The `dxspider` image installs ttyd 1.7.7 as a static binary from GitHub
-releases (x86_64 only). On arm64 hosts (e.g., Raspberry Pi 4, Apple Silicon
-under Docker Desktop) the binary will fail to execute. Override at build time:
+---
 
-```bash
-docker compose build \
-  --build-arg TTYD_URL=https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.aarch64 \
-  dxspider
-```
+## License
 
-Or build ttyd from source: https://github.com/tsl0922/ttyd
+MIT — see [LICENSE](LICENSE).
 
-### (d) Spot-file backfill is a no-op on native DXSpider data (v1)
+---
 
-Backfill reads CSV/TSV `*.spots` files from the shared volume. DXSpider's
-native spot files use Perl `Data::Dumper`/binary format and are NOT parsed in
-v1. With `DX_BACKFILL_ON_START=true` first boot is safe but inserts 0
-historical spots; charts populate from the live ingestor. Native-format
-backfill is a Phase 2 item.
+## Acknowledgements
 
-### (e) show/users poll shares the telnet stream with spots (Phase-2 simplification)
-
-The v1 `show/users` poll sends the command on the same telnet connection used
-for spot streaming and collects response lines within a 1-second window. This
-means that spot lines arriving during the collection window may be interleaved
-with the `show/users` output, and vice versa. In practice the volume is low
-enough that this is imperceptible, but it is a documented simplification.
-Proper protocol multiplexing (demultiplexing spot vs. response traffic on the
-same stream) is a Phase-2 item.
-
-## Phase 2 — Partner peering and RBN aggregator (not active in v1)
-
-The following features are designed and documented but intentionally disabled
-in the initial deployment. Enable them when you are ready for a public node.
-
-### Inter-cluster peering
-
-Add partner node `connect` configuration to `/spider/local/DXVars.pm` (or a
-separate connect script) via the sysop console or by editing the volume.
-DXSpider supports the PC protocol for node-to-node peering. Peering config is
-entirely in the DXSpider volume — no compose changes needed.
-
-### RBN aggregator feed
-
-Connect to the Reverse Beacon Network aggregator as an additional DXSpider
-cluster link (a DXSpider-to-DXSpider or AR-Cluster-compatible connection).
-The stats ingestor already tags spots `source=rbn` vs `source=human` based on
-comment patterns, so RBN spots are correctly classified from day one — only
-the upstream DXSpider connection needs to be configured.
-
-## Backup
-
-### Database backup
-
-```bash
-# Run pg_dump against the running postgres container
-docker compose exec postgres \
-    pg_dump -U dxstats dxstats | gzip > backup-$(date +%Y%m%d).sql.gz
-```
-
-Schedule this via cron on the host for automated backups. Recommended: daily
-at a low-traffic time, with at least 7 days of retention.
-
-### Volume backup
-
-```bash
-# Backup dxspider config and data volumes
-docker run --rm \
-    -v dxcluster_dxspider-config:/vol/config:ro \
-    -v dxcluster_dxspider-data:/vol/data:ro \
-    -v $(pwd)/backups:/backup \
-    debian:bookworm-slim \
-    tar czf /backup/dxspider-volumes-$(date +%Y%m%d).tar.gz -C /vol .
-```
-
-Note: the compose project name (`dxcluster`, set via `name:` in
-`docker-compose.yml`) is prepended to volume names by Docker.
-
-## Security notes
-
-- **Change all default passwords** in `.env` before exposing the node to the
-  internet: `TTYD_PASSWORD`, `DX_MONITOR_PASSWORD`, `POSTGRES_PASSWORD` (and
-  `DX_DB_DSN` to match), and any DXSpider sysop password set via the console.
-- **Telnet (port 7300)** is published directly to the host with no
-  authentication beyond DXSpider's own callsign validation. Consider firewall
-  rules or a VPN if you want to restrict access before your node is ready for
-  public use.
-- **The sysop console** at `/cluster` is protected by ttyd HTTP basic auth
-  (`TTYD_USER` / `TTYD_PASSWORD`). Use a strong password and consider adding
-  an IP allowlist in Caddy for `/cluster` if your node is public.
-- **The stats dashboard** (`/`) is unauthenticated read-only public data.
-  This is intentional in v1. Dashboard auth is out of scope (see spec §11).
-- **HTTPS:** Set `DOMAIN` to your FQDN to enable automatic Let's Encrypt TLS.
-  Caddy renews certificates automatically. Ensure ports 80 and 443 are
-  reachable from the internet for the ACME HTTP-01 challenge.
-
-## Verification status
-
-The Python test suite (parsers, aggregation, API) passes locally. The Docker
-images and Compose stack are authored and peer-reviewed but have **not been
-brought up in the authoring environment** (no Docker available). Container
-bring-up and integration smoke-testing are the first step for the operator on
-a Docker-capable host. See "Known integration notes" above for the main items
-to verify on first run.
+- **DXSpider** by Dirk Koopman G1TLH and contributors. This project uses the [EA3CV `mojo` fork](https://github.com/EA3CV/dx-spider) (the primary HTTPS-accessible mirror carrying current development). The canonical upstream source is `git://scm.dxcluster.org/scm/spider` (port 9418, git protocol only) — see [docs/dxspider.md](docs/dxspider.md) for source-override instructions and production self-mirror recommendations.
+- **ttyd** by Shuanglei Tao — browser-based terminal emulator used for the sysop web console.
