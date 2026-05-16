@@ -1,0 +1,69 @@
+# Caddyfile — DX Cluster reverse proxy
+#
+# Site address comes from the DOMAIN env var (set in .env → docker-compose.yml).
+#   DOMAIN=localhost      → plain HTTP on port 80 (Caddy serves without TLS)
+#   DOMAIN=dx.example.com → automatic Let's Encrypt HTTPS (ports 80 + 443)
+#
+# Routing:
+#   /cluster and /cluster/* → dxspider:8080 (ttyd web console, prefix stripped)
+#   everything else         → stats-svc:8000  (FastAPI dashboard)
+
+{$DOMAIN:localhost} {
+
+    # -----------------------------------------------------------------------
+    # Security headers (applied to all responses via a snippet-style header
+    # block; does not need to be duplicated per-route because Caddy merges
+    # headers set at the site level with route-level responses).
+    # -----------------------------------------------------------------------
+    header {
+        # Prevent MIME-type sniffing
+        X-Content-Type-Options "nosniff"
+        # Basic clickjacking protection (dashboard is read-only public stats;
+        # tighten to DENY if you embed nothing)
+        X-Frame-Options "SAMEORIGIN"
+        # Referrer policy — no leaking host to upstream telemetry
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Remove server fingerprint
+        -Server
+    }
+
+    # -----------------------------------------------------------------------
+    # /cluster* → DXSpider ttyd web console
+    #
+    # handle_path strips the matched prefix before forwarding, so ttyd
+    # receives requests at its own root path. ttyd uses WebSockets for the
+    # terminal stream — Caddy's reverse_proxy upgrades WS automatically when
+    # the upstream sends a 101 response; no extra directive is needed.
+    #
+    # Timeouts are relaxed to accommodate long-lived terminal sessions.
+    # -----------------------------------------------------------------------
+    handle_path /cluster* {
+        reverse_proxy dxspider:8080 {
+            # Allow long-lived WebSocket connections (ttyd terminal).
+            transport http {
+                dial_timeout         10s
+                response_header_timeout 30s
+                # keepalive controls idle HTTP keep-alive; WS connections are
+                # exempt from this timer (they are upgraded, not kept alive).
+                keepalive_idle_conns 5
+            }
+            # Forward the original Host so ttyd can build correct URLs if
+            # it ever needs it; strip the X-Forwarded-Prefix artefact.
+            header_up Host {upstream_hostport}
+        }
+    }
+
+    # -----------------------------------------------------------------------
+    # Everything else → stats-svc FastAPI dashboard + WebSocket live feed
+    # -----------------------------------------------------------------------
+    handle {
+        reverse_proxy stats-svc:8000 {
+            transport http {
+                dial_timeout            10s
+                response_header_timeout 60s
+                keepalive_idle_conns    10
+            }
+            header_up Host {upstream_hostport}
+        }
+    }
+}

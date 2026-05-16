@@ -1,0 +1,161 @@
+# docker-compose.yml — DX Cluster stack
+# Services: dxspider, stats-svc, postgres, caddy
+#
+# Usage:
+#   cp .env.example .env
+#   # Edit .env — set NODE_CALL, passwords, DOMAIN
+#   docker compose up -d
+#
+# Requires Docker Compose v2 (compose spec, no "version:" key needed).
+
+name: dxcluster
+
+# ---------------------------------------------------------------------------
+# Networks
+# ---------------------------------------------------------------------------
+networks:
+  cluster-net:
+    driver: bridge
+
+# ---------------------------------------------------------------------------
+# Named volumes
+# ---------------------------------------------------------------------------
+volumes:
+  dxspider-config: {}
+  dxspider-data:   {}
+  postgres-data:   {}
+  caddy-data:      {}
+
+# ---------------------------------------------------------------------------
+# Services
+# ---------------------------------------------------------------------------
+services:
+
+  # -------------------------------------------------------------------------
+  # dxspider — DXSpider cluster engine
+  # -------------------------------------------------------------------------
+  dxspider:
+    build:
+      context: ./dxspider
+      args:
+        # Override the upstream source coordinates if you mirror the repo.
+        # Defaults are set inside the Dockerfile; list them here so .env can
+        # override without touching the Dockerfile.
+        SPIDER_REPO:   ${SPIDER_REPO:-}
+        SPIDER_BRANCH: ${SPIDER_BRANCH:-}
+        SPIDER_SHA:    ${SPIDER_SHA:-}
+    restart: unless-stopped
+    networks:
+      - cluster-net
+    # Telnet published to host; ttyd web console is internal-only (Caddy proxies).
+    ports:
+      - "7300:7300"
+    volumes:
+      - dxspider-config:/spider/local
+      - dxspider-data:/spider/local_data
+    environment:
+      NODE_CALL:        ${NODE_CALL:-N0CALL-2}
+      SYSOP_CALL:       ${SYSOP_CALL:-N0CALL}
+      SYSOP_NAME:       ${SYSOP_NAME:-Sysop}
+      LOCATOR:          ${LOCATOR:-AA00aa}
+      NODE_QTH:         ${NODE_QTH:-Unknown QTH}
+      SYSOP_EMAIL:      ${SYSOP_EMAIL:-sysop@example.com}
+      NODE_TELNET_PORT: ${NODE_TELNET_PORT:-7300}
+      SYSOP_WEB_PORT:   ${SYSOP_WEB_PORT:-8080}
+      TTYD_USER:        ${TTYD_USER:-sysop}
+      TTYD_PASSWORD:    ${TTYD_PASSWORD:-changeme}
+      OVERWRITE_CONFIG: ${OVERWRITE_CONFIG:-no}
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "7300"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  # -------------------------------------------------------------------------
+  # postgres — durable spot/user store
+  # -------------------------------------------------------------------------
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    networks:
+      - cluster-net
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER:     dxstats
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dxstats}
+      POSTGRES_DB:       dxstats
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "dxstats"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+
+  # -------------------------------------------------------------------------
+  # stats-svc — telnet ingestor + FastAPI dashboard
+  # -------------------------------------------------------------------------
+  stats-svc:
+    build:
+      context: ./stats-svc
+    restart: unless-stopped
+    networks:
+      - cluster-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      dxspider:
+        condition: service_started
+    # dxspider-data is mounted read-only so stats-svc can backfill from
+    # DXSpider's spot files.  Port 8000 is internal — Caddy reverse-proxies it.
+    volumes:
+      - dxspider-data:/spider-spots:ro
+    environment:
+      # Must stay consistent with POSTGRES_PASSWORD above.
+      DX_DB_DSN:             ${DX_DB_DSN:-postgresql://dxstats:dxstats@postgres:5432/dxstats}
+      DX_HOST:               dxspider
+      DX_PORT:               ${DX_PORT:-7300}
+      DX_MONITOR_USER:       ${DX_MONITOR_USER:-statsmon}
+      DX_MONITOR_PASSWORD:   ${DX_MONITOR_PASSWORD:-changeme}
+      DX_USERS_POLL_SECONDS: ${DX_USERS_POLL_SECONDS:-20}
+      DX_BACKFILL_ON_START:  ${DX_BACKFILL_ON_START:-true}
+      # Spot files live at /spider/local_data/spots inside dxspider-data;
+      # the volume is mounted at /spider-spots, so the effective path is below.
+      DX_SPOT_FILES_DIR:     /spider-spots/spots
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=4).status==200 else sys.exit(1)"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  # -------------------------------------------------------------------------
+  # caddy — TLS termination and reverse proxy
+  # -------------------------------------------------------------------------
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    networks:
+      - cluster-net
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    depends_on:
+      - stats-svc
+      - dxspider
+    healthcheck:
+      test: ["CMD", "caddy", "version"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
