@@ -32,6 +32,8 @@
   // -------------------------------------------------------------------------
   function $(id) { return document.getElementById(id); }
 
+  function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
   function setUserCount(n) {
     $('userCount').textContent = n;
   }
@@ -143,7 +145,7 @@
   function renderTable(tableId, rows, cols) {
     const tbody = document.querySelector(`#${tableId} tbody`);
     tbody.innerHTML = rows.map((row, i) =>
-      `<tr><td>${i + 1}</td>${cols.map(c => `<td>${row[c]}</td>`).join('')}</tr>`
+      `<tr><td>${i + 1}</td>${cols.map(c => `<td>${esc(row[c])}</td>`).join('')}</tr>`
     ).join('');
   }
 
@@ -151,7 +153,7 @@
     setUserCount(data.count);
     const list = $('usersList');
     list.innerHTML = data.users.map(u =>
-      `<li><strong>${u.callsign}</strong><span class="conn-type">${u.conn_type}</span></li>`
+      `<li><strong>${esc(u.callsign)}</strong><span class="conn-type">${esc(u.conn_type)}</span></li>`
     ).join('');
   }
 
@@ -175,13 +177,13 @@
       tbody.innerHTML = (data.recent || []).map(r => {
         const ts = (r.ts || '').substring(0, 19).replace('T', ' ');
         return `<tr>
-          <td>${ts}</td>
-          <td>${r.spotter || ''}</td>
-          <td>${r.dx_call || ''}</td>
-          <td>${r.freq_khz != null ? Number(r.freq_khz).toFixed(1) : ''}</td>
-          <td>${r.band || ''}</td>
-          <td>${r.mode || ''}</td>
-          <td>${r.source || ''}</td>
+          <td>${esc(ts)}</td>
+          <td>${esc(r.spotter || '')}</td>
+          <td>${esc(r.dx_call || '')}</td>
+          <td>${esc(r.freq_khz != null ? Number(r.freq_khz).toFixed(1) : '')}</td>
+          <td>${esc(r.band || '')}</td>
+          <td>${esc(r.mode || '')}</td>
+          <td>${esc(r.source || '')}</td>
         </tr>`;
       }).join('');
 
