@@ -53,6 +53,11 @@ def _source_filter(source: str) -> "str | None":
     ``"both"``  → ``None``   (no filter)
     ``"human"`` → ``"human"``
     ``"rbn"``   → ``"rbn"``
+
+    Maps source → the ``source`` argument accepted by ``fetch_spots`` (returns
+    ``None`` for "both", meaning no filter); this is distinct from the
+    rollup-path filtering performed by ``_filter_rollup`` used in the breakdown
+    functions.
     """
     return None if source == "both" else source
 
@@ -87,7 +92,8 @@ async def activity_series(
     ``count=0`` so callers always receive exactly *hours* buckets.
 
     *_now* is an optional override for the current UTC time, intended for
-    tests with deterministic fixed timestamps.
+    tests with deterministic fixed timestamps.  The window includes the current
+    (still-open) partial hour as the last bucket.
     """
     # Build a map of hour_ts → count from the rollup.
     rows = await repo.rollup_rows()

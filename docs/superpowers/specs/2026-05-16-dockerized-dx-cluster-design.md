@@ -6,10 +6,10 @@ Status: Approved (user authorized autonomous build)
 ## 1. Goal
 
 A fully working, feature-rich amateur-radio DX cluster running as a Docker
-Compose stack. DXSpider provides the cluster engine (telnet + peering + its
-own web console). A custom Python service ingests the live spot stream and
-serves a rich statistics dashboard (graphs, pie charts, leaderboards, live
-connected-users panel).
+Compose stack. DXSpider provides the cluster engine (telnet + peering). A
+custom Python service ingests the live spot stream and serves a rich statistics
+dashboard (graphs, pie charts, leaderboards, live connected-users panel). A
+ttyd process provides sysop web console access.
 
 Deployment intent: a public node, built **standalone first** with partner
 peering and the RBN aggregator feed as a documented, config-gated Phase 2.
@@ -19,8 +19,10 @@ peering and the RBN aggregator feed as a documented, config-gated Phase 2.
 Four-service Docker Compose stack on a single host:
 
 - **dxspider** — DXSpider cluster engine. Telnet `7300` (published to host),
-  built-in Mojolicious web console, PC-protocol peering (Phase 2). Configured
-  standalone. Non-root. Persistent volume for `/spider/local_data`.
+  ttyd-based sysop web console (wrapping `console.pl`) on port 8080 — DXSpider
+  mojo has no native web UI; ttyd is an external process inside the image.
+  PC-protocol peering (Phase 2). Configured standalone. Non-root. Persistent
+  volume for `/spider/local_data`.
 - **stats-svc** — Python. Two cooperating roles in one container:
   - *ingestor*: persistent telnet "monitor" session to dxspider, parses
     spots/announce/WWV and polls `show/users`; writes Postgres.
@@ -35,7 +37,7 @@ Telnet (7300) is published directly to the host (not proxied). All HTTP(S)
 goes through Caddy.
 
 ```
-Internet/LAN → caddy → stats-svc (/) and dxspider web console (/cluster)
+Internet/LAN → caddy → stats-svc (/) and dxspider ttyd sysop console (/cluster → port 8080)
 ham operators → host:7300 → dxspider (telnet)
 partner nodes → dxspider PC protocol (Phase 2)
 stats-svc ingestor → dxspider telnet (monitor user) → postgres
@@ -53,6 +55,8 @@ stats-svc backfill → dxspider spot files (read-only, first boot)
   stats ingestor to log in with (registered, no sysop rights).
 - Persistent named volume `dxspider-data` → `/spider/local_data` (spot files, user
   db, messages) so history/state survive restarts and image upgrades.
+- A pinned `ttyd` static binary is installed in the image to serve `console.pl`
+  as the sysop web console on port 8080 (no native DXSpider web UI exists).
 - Phase 2 (documented, not active in v1): partner `connect` config block and
   outbound RBN aggregator connection, both env-gated.
 
@@ -102,7 +106,7 @@ All filterable by `human | rbn | both` and time range:
 
 ## 7. Web exposure & TLS
 
-- Caddy routes `/` → stats dashboard, `/cluster*` → DXSpider web console.
+- Caddy routes `/` → stats dashboard, `/cluster*` → ttyd sysop console (dxspider service, port 8080, wrapping `console.pl`).
 - `DOMAIN` set → automatic Let's Encrypt HTTPS; unset → HTTP on localhost.
 - Security headers and sane proxy timeouts.
 

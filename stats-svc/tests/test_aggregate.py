@@ -509,6 +509,13 @@ class TestGeoBreakdown:
         result = await geo_breakdown(r, by="dx_continent")
         assert result == []
 
+    @pytest.mark.asyncio
+    async def test_geo_breakdown_invalid_by_raises(self):
+        from app.aggregate import geo_breakdown
+        from app.repo import MemoryRepo
+        with pytest.raises(ValueError):
+            await geo_breakdown(MemoryRepo(), by="not_a_dimension")
+
 
 # ---------------------------------------------------------------------------
 # top_spotters

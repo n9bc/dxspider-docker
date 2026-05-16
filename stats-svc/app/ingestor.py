@@ -169,7 +169,7 @@ class Ingestor:
     # ------------------------------------------------------------------
 
     async def stop(self) -> None:
-        """Signal the run loop to stop after the current iteration."""
+        """Signal the run loop to stop after the current iteration, interrupting any backoff sleep early for cooperative shutdown."""
         self._stop_event.set()
 
     # ------------------------------------------------------------------
@@ -363,7 +363,7 @@ class Ingestor:
 
         NOTE: In a real DXSpider stream the show/users output is interleaved
         with spot lines on the same reader.  For v1 simplicity we send the
-        command and accumulate lines for a short collection window (0.5 s of
+        command and accumulate lines for a short collection window (1 s of
         inactivity) then parse the block.  Phase 2 can add proper protocol
         multiplexing if needed.
         """
@@ -377,9 +377,9 @@ class Ingestor:
                 await writer.drain()
                 # Collect response lines for up to 1 s
                 block_lines: list[str] = []
-                deadline = asyncio.get_event_loop().time() + 1.0
-                while asyncio.get_event_loop().time() < deadline:
-                    remaining = deadline - asyncio.get_event_loop().time()
+                deadline = asyncio.get_running_loop().time() + 1.0
+                while asyncio.get_running_loop().time() < deadline:
+                    remaining = deadline - asyncio.get_running_loop().time()
                     try:
                         raw = await asyncio.wait_for(
                             reader.readline(), timeout=max(0.05, remaining)
