@@ -83,7 +83,7 @@
     }, true);
   }
 
-  function renderPie(chartRef, container, data, refHolder, title) {
+  function renderPie(chartRef, container, data) {
     const inst = getOrInit(container, chartRef);
     inst.setOption({
       backgroundColor: 'transparent',
@@ -106,11 +106,11 @@
   }
 
   function renderBand(data) {
-    bandChart = renderPie(bandChart, $('bandChart'), data, 'bandChart', 'Band');
+    bandChart = renderPie(bandChart, $('bandChart'), data);
   }
 
   function renderMode(data) {
-    modeChart = renderPie(modeChart, $('modeChart'), data, 'modeChart', 'Mode');
+    modeChart = renderPie(modeChart, $('modeChart'), data);
   }
 
   function renderGeo(data) {
@@ -243,7 +243,6 @@
         pushTicker(msg.data);
       } else if (msg.type === 'users' && msg.data) {
         renderUsers(msg.data);
-        setUserCount(msg.data.count);
       }
     };
 

@@ -486,3 +486,27 @@ def test_websocket_accepts_connection(client: TestClient):
     with client.websocket_connect("/ws") as ws:
         # Connection accepted; no exception means success
         pass
+
+
+def test_websocket_receives_live_broadcast():
+    """WS client receives an event placed on the live sink after connecting.
+
+    Covers the real ingestor scenario: client connects first, then an event
+    is broadcast into the hub's live sinks (not the pending queue).
+
+    We use the TestClient's anyio BlockingPortal (tc.portal) to call
+    hub.broadcast() on the background event loop that owns the asyncio.Queue,
+    so the WS send-loop coroutine wakes up correctly across threads.
+    """
+    from app.api import create_app
+
+    app = create_app(_make_repo())
+    event = {"type": "spot", "data": {"dx_call": "ZL3NW", "freq_khz": 21225.5}}
+
+    with TestClient(app) as tc:
+        with tc.websocket_connect("/ws") as ws:
+            hub = app.state.hub
+            assert len(hub._sinks) == 1
+            # Run broadcast() on the background event loop via the portal
+            tc.portal.call(hub.broadcast, event)
+            assert ws.receive_json() == event

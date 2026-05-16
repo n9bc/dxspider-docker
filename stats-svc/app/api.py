@@ -23,6 +23,7 @@ Design notes
 from __future__ import annotations
 
 import asyncio
+import logging
 from enum import Enum
 from typing import Any
 
@@ -32,6 +33,9 @@ import pathlib
 
 from app.repo import Repo
 
+logger = logging.getLogger(__name__)
+
+# BroadcastHub is exported for use by the ingestor (Task 8) and tests.
 __all__ = ["create_app", "BroadcastHub"]
 
 # ---------------------------------------------------------------------------
@@ -71,9 +75,20 @@ class BroadcastHub:
         self._sinks.discard(q)
 
     async def broadcast(self, event: dict[str, Any]) -> None:
-        """Deliver *event* to every connected sink."""
+        """Deliver *event* to every connected sink.
+
+        Non-blocking: if a sink's queue is full (slow client), drop the oldest
+        item to make room rather than blocking the broadcast loop.
+        """
         for q in list(self._sinks):
-            await q.put(event)
+            try:
+                q.put_nowait(event)
+            except asyncio.QueueFull:
+                try:
+                    q.get_nowait()
+                    q.put_nowait(event)
+                except Exception:
+                    pass
 
 
 # ---------------------------------------------------------------------------
@@ -180,7 +195,7 @@ def create_app(repo: Repo) -> FastAPI:
         await websocket.accept()
 
         # Drain any pending messages (for tests / early ingestor events)
-        personal_q: asyncio.Queue = asyncio.Queue()
+        personal_q: asyncio.Queue = asyncio.Queue(maxsize=256)
 
         # Move pending messages into personal queue so they are delivered first
         while not hub.pending.empty():
@@ -198,7 +213,7 @@ def create_app(repo: Repo) -> FastAPI:
         except WebSocketDisconnect:
             pass
         except Exception:
-            pass
+            logger.debug("ws send loop ended", exc_info=True)
         finally:
             hub.disconnect(personal_q)
 
