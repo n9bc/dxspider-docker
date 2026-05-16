@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DX Cluster Stats</title>
+  <link rel="stylesheet" href="/style.css" />
+  <!--
+    Apache ECharts 5.5.1 loaded from cdnjs.
+    For offline/air-gapped use, download and vendor this file:
+    https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.1/echarts.min.js
+  -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.1/echarts.min.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <h1>DX Cluster Stats</h1>
+    <div class="header-controls">
+      <label>Source:
+        <select id="sourceFilter">
+          <option value="both">Both</option>
+          <option value="human">Human</option>
+          <option value="rbn">RBN</option>
+        </select>
+      </label>
+      <span class="user-count">Connected: <strong id="userCount">—</strong></span>
+    </div>
+  </header>
+
+  <main class="dashboard">
+    <!-- Activity -->
+    <section class="card card--wide" id="activitySection">
+      <h2>Activity (last 24 h)</h2>
+      <div class="chart" id="activityChart"></div>
+    </section>
+
+    <!-- Band & Mode -->
+    <section class="card" id="bandSection">
+      <h2>Band Breakdown</h2>
+      <div class="chart" id="bandChart"></div>
+    </section>
+    <section class="card" id="modeSection">
+      <h2>Mode Breakdown</h2>
+      <div class="chart" id="modeChart"></div>
+    </section>
+
+    <!-- Geographic -->
+    <section class="card card--wide" id="geoSection">
+      <div class="section-header">
+        <h2>Geographic</h2>
+        <label>By:
+          <select id="geoBy">
+            <option value="dx_continent">DX Continent</option>
+            <option value="dx_dxcc">DX Entity</option>
+            <option value="spotter_dxcc">Spotter Entity</option>
+          </select>
+        </label>
+      </div>
+      <div class="chart" id="geoChart"></div>
+    </section>
+
+    <!-- Top Spotters -->
+    <section class="card" id="spottersSection">
+      <h2>Top Spotters</h2>
+      <div class="table-wrap">
+        <table id="spottersTable">
+          <thead><tr><th>#</th><th>Callsign</th><th>Spots</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Top DX -->
+    <section class="card" id="topDxSection">
+      <h2>Top DX</h2>
+      <div class="table-wrap">
+        <table id="topDxTable">
+          <thead><tr><th>#</th><th>Callsign</th><th>Times Spotted</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Live Spot Ticker -->
+    <section class="card card--wide" id="tickerSection">
+      <h2>Live Spot Ticker</h2>
+      <ul id="spotTicker" class="ticker-list"></ul>
+    </section>
+
+    <!-- Connected Users -->
+    <section class="card" id="usersSection">
+      <h2>Connected Users</h2>
+      <ul id="usersList" class="users-list"></ul>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

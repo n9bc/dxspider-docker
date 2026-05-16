@@ -1,0 +1,273 @@
+/* DX Cluster Stats — dark responsive grid */
+
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --border: #2a2d3a;
+  --text: #e2e8f0;
+  --muted: #8892a4;
+  --accent: #4f9cf9;
+  --accent2: #38bdf8;
+  --success: #4ade80;
+  --warn: #fbbf24;
+  --radius: 8px;
+  --gap: 1rem;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ---------- Header ---------- */
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  padding: 0.75rem 1.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.site-header h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.user-count {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.user-count strong {
+  color: var(--success);
+}
+
+/* ---------- Dashboard grid ---------- */
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--gap);
+  padding: var(--gap) 1.5rem 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* ---------- Cards ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  overflow: hidden;
+}
+
+.card--wide {
+  grid-column: 1 / -1;
+}
+
+.card h2 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.section-header h2 {
+  margin-bottom: 0;
+}
+
+/* ---------- Charts ---------- */
+.chart {
+  width: 100%;
+  height: 260px;
+}
+
+/* ---------- Form controls ---------- */
+select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+}
+
+select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+label {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+/* ---------- Tables ---------- */
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+thead th {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  color: var(--muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+
+tbody tr:last-child {
+  border-bottom: none;
+}
+
+tbody tr:hover {
+  background: rgba(79, 156, 249, 0.06);
+}
+
+tbody td {
+  padding: 0.4rem 0.5rem;
+}
+
+tbody td:first-child {
+  color: var(--muted);
+  font-size: 0.8rem;
+  width: 2rem;
+}
+
+/* ---------- Ticker ---------- */
+.ticker-list {
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+  font-size: 0.85rem;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+
+.ticker-list li {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--accent2);
+  animation: fadeIn 0.3s ease;
+}
+
+.ticker-list li:last-child {
+  border-bottom: none;
+}
+
+.ticker-empty {
+  color: var(--muted);
+  font-style: italic;
+  font-family: inherit;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Users list ---------- */
+.users-list {
+  list-style: none;
+  font-size: 0.875rem;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.users-list li {
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.users-list li:last-child {
+  border-bottom: none;
+}
+
+.conn-type {
+  font-size: 0.75rem;
+  color: var(--muted);
+  background: var(--bg);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+/* ---------- Scrollbar styling (Webkit) ---------- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 600px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+    padding: var(--gap) 0.75rem 2rem;
+  }
+
+  .card--wide {
+    grid-column: 1;
+  }
+
+  .site-header {
+    padding: 0.75rem 1rem;
+  }
+}
