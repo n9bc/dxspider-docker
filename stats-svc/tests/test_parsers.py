@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from app.parsers import parse_line, parse_users_block, SpotRecord, InfoRecord, ConnectedUser
 
 
@@ -54,7 +56,7 @@ def test_unparseable_returns_none():
 
 
 def test_parse_users_block():
-    text = open("tests/fixtures/users_block.txt", encoding="utf-8").read()
+    text = (Path(__file__).parent / "fixtures" / "users_block.txt").read_text(encoding="utf-8")
     users = parse_users_block(text)
     calls = {u.callsign for u in users}
     assert "K1ABC" in calls
@@ -62,3 +64,14 @@ def test_parse_users_block():
     assert all(isinstance(u, ConnectedUser) for u in users)
     k = next(u for u in users if u.callsign == "K1ABC")
     assert k.conn_type  # non-empty string
+
+
+def test_parse_rbn_spot_detected_by_skimmer_grammar():
+    rec = parse_line("DX de W9PA:   14025.0  JA1XYZ       CW 15 dB 25 WPM CQ   1234Z")
+    assert rec.source == "rbn"
+    assert rec.spotter == "W9PA"
+
+
+def test_parse_line_none_and_nonstring_returns_none():
+    assert parse_line(None) is None
+    assert parse_line(12345) is None

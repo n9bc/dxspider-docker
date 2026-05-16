@@ -12,7 +12,7 @@ parse_users_block(text: str) -> list[ConnectedUser]
 """
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from app.bands import band_for_khz, mode_for_khz_comment
 from app.dxcc import resolve
@@ -78,8 +78,8 @@ _RE_DX = re.compile(
     r"(?P<freq>\d+(?:\.\d+)?)"                       # frequency in kHz
     r"\s+"
     r"(?P<dxcall>[A-Z0-9/]+)"                        # DX callsign
-    r"\s+"
-    r"(?P<rest>.+?)"                                  # comment + optional time
+    r"\s*"
+    r"(?P<rest>.*?)"                                  # comment + optional time
     r"\s*$",
     re.IGNORECASE,
 )
@@ -167,6 +167,8 @@ def parse_line(line: str) -> "SpotRecord | InfoRecord | None":
     Returns None for blank lines or lines that do not match any known format.
     Never raises — catches all parsing exceptions and returns None.
     """
+    if not isinstance(line, str):
+        return None
     line = line.strip()
     if not line:
         return None
