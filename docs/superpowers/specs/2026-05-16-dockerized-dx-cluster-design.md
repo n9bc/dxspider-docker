@@ -20,7 +20,7 @@ Four-service Docker Compose stack on a single host:
 
 - **dxspider** — DXSpider cluster engine. Telnet `7300` (published to host),
   built-in Mojolicious web console, PC-protocol peering (Phase 2). Configured
-  standalone. Non-root. Persistent volume for `/spider/data`.
+  standalone. Non-root. Persistent volume for `/spider/local_data`.
 - **stats-svc** — Python. Two cooperating roles in one container:
   - *ingestor*: persistent telnet "monitor" session to dxspider, parses
     spots/announce/WWV and polls `show/users`; writes Postgres.
@@ -51,7 +51,7 @@ stats-svc backfill → dxspider spot files (read-only, first boot)
   `MONITOR_USER`, `MONITOR_PASSWORD`. Standalone: no partner connect statements.
 - A dedicated low-privilege monitor user is provisioned at first boot for the
   stats ingestor to log in with (registered, no sysop rights).
-- Persistent named volume `dxspider-data` → `/spider/data` (spot files, user
+- Persistent named volume `dxspider-data` → `/spider/local_data` (spot files, user
   db, messages) so history/state survive restarts and image upgrades.
 - Phase 2 (documented, not active in v1): partner `connect` config block and
   outbound RBN aggregator connection, both env-gated.

@@ -122,9 +122,9 @@ telnet localhost 7300
    snapshots to connected browsers in real time.
 
 **Backfill:** On first start (if `DX_BACKFILL_ON_START=true`), the ingestor
-reads DXSpider's existing spot files from the shared `dxspider-data` volume
-before connecting to the telnet stream, so charts are populated with historical
-data immediately rather than starting from zero.
+scans DXSpider's spot-file directory from the shared `dxspider-data` volume
+before connecting to the telnet stream. See note (d) below for an important
+caveat about native DXSpider spot-file format support in v1.
 
 ## Known integration notes — verify on first real run
 
@@ -151,6 +151,14 @@ The required fields in `DXVars.pm` are verified against the cloned EA3CV mojo
 source on first build. If the build fails with a Perl error referencing a
 missing or mismatched variable, check `/spider/local/DXVars.pm` against the
 template in `dxspider/templates/DXVars.pm.tmpl` and the DXSpider source.
+
+### (d) Spot-file backfill is a no-op on native DXSpider data (v1)
+
+Backfill reads CSV/TSV `*.spots` files from the shared volume. DXSpider's
+native spot files use Perl `Data::Dumper`/binary format and are NOT parsed in
+v1. With `DX_BACKFILL_ON_START=true` first boot is safe but inserts 0
+historical spots; charts populate from the live ingestor. Native-format
+backfill is a Phase 2 item.
 
 ### (c) ttyd version and architecture
 

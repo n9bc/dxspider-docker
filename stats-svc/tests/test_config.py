@@ -22,4 +22,4 @@ def test_settings_defaults(monkeypatch):
     assert s.dx_port == 7300
     assert s.users_poll_seconds == 20
     assert s.backfill_on_start is True
-    assert s.spot_files_dir == "/spider/data/spots"
+    assert s.spot_files_dir == "/spider-spots/spots"

@@ -21,7 +21,7 @@ class Settings:
     dx_monitor_password: str
     users_poll_seconds: int = 20
     backfill_on_start: bool = True
-    spot_files_dir: str = "/spider/data/spots"
+    spot_files_dir: str = "/spider-spots/spots"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -39,6 +39,6 @@ class Settings:
                 "DX_BACKFILL_ON_START", "true"
             ).strip().lower() in _TRUTHY,
             spot_files_dir=os.environ.get(
-                "DX_SPOT_FILES_DIR", "/spider/data/spots"
+                "DX_SPOT_FILES_DIR", "/spider-spots/spots"
             ),
         )

@@ -35,15 +35,10 @@ services:
   # dxspider — DXSpider cluster engine
   # -------------------------------------------------------------------------
   dxspider:
+    # Override DXSpider source at build time (optional):
+    #   docker compose build --build-arg SPIDER_REPO=... --build-arg SPIDER_BRANCH=... --build-arg SPIDER_SHA=... dxspider
     build:
       context: ./dxspider
-      args:
-        # Override the upstream source coordinates if you mirror the repo.
-        # Defaults are set inside the Dockerfile; list them here so .env can
-        # override without touching the Dockerfile.
-        SPIDER_REPO:   ${SPIDER_REPO:-}
-        SPIDER_BRANCH: ${SPIDER_BRANCH:-}
-        SPIDER_SHA:    ${SPIDER_SHA:-}
     restart: unless-stopped
     networks:
       - cluster-net
@@ -138,7 +133,7 @@ services:
   # caddy — TLS termination and reverse proxy
   # -------------------------------------------------------------------------
   caddy:
-    image: caddy:2
+    image: caddy:2.8
     restart: unless-stopped
     networks:
       - cluster-net

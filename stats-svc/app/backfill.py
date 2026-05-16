@@ -36,7 +36,7 @@ the same files inserts 0 rows the second time.
 Phase 2 extension
 ~~~~~~~~~~~~~~~~~
 Native DXSpider spot files are Perl Data::Dumper (or binary) dumps stored
-under ``/spider/data/spots/``.  Parse support for that format can be added
+under ``/spider/local_data/spots/``.  Parse support for that format can be added
 in a Phase 2 by extending ``parse_backfill_line`` with a format-detection
 branch, keeping this module as the single entry point for all backfill work.
 """
