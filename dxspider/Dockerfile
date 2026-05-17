@@ -128,6 +128,9 @@ RUN git clone --branch "${SPIDER_BRANCH}" "${SPIDER_REPO}" /spider \
 RUN mkdir -p /spider/templates
 COPY templates/DXVars.pm.tmpl    /spider/templates/DXVars.pm.tmpl
 COPY templates/Listeners.pm.tmpl /spider/templates/Listeners.pm.tmpl
+COPY templates/motd.tmpl    /spider/templates/motd.tmpl
+COPY templates/startup.tmpl /spider/templates/startup.tmpl
+COPY dashboard-url.sh       /spider/dashboard-url.sh
 
 # ---------------------------------------------------------------------------
 # Entrypoint script
