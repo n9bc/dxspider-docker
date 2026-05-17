@@ -21,9 +21,18 @@ SYSOP_WEB_PORT="${SYSOP_WEB_PORT:-8080}"
 TTYD_USER="${TTYD_USER:-sysop}"
 TTYD_PASSWORD="${TTYD_PASSWORD:-changeme}"
 OVERWRITE_CONFIG="${OVERWRITE_CONFIG:-no}"
+DOMAIN="${DOMAIN:-localhost}"
+
+# DASHBOARD_URL shown in the connect MOTD. Explicit value wins; otherwise
+# derived from DOMAIN by the shared helper (single source of truth, also
+# unit-tested). Sourced before privilege drop; helper is set -u safe.
+# shellcheck source=/dev/null
+. /spider/dashboard-url.sh
+DASHBOARD_URL="$(derive_dashboard_url)"
 
 echo "[entrypoint] NODE_CALL=${NODE_CALL}  SYSOP_CALL=${SYSOP_CALL}  LOCATOR=${LOCATOR}"
 echo "[entrypoint] Telnet port=${NODE_TELNET_PORT}  Web console port=${SYSOP_WEB_PORT}"
+echo "[entrypoint] DOMAIN=${DOMAIN}  DASHBOARD_URL=${DASHBOARD_URL}"
 
 # ---------------------------------------------------------------------------
 # 2. Render /spider/local/DXVars.pm from template (only when absent or forced)
@@ -64,11 +73,93 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 3b. Render /spider/local_data/motd from template (connect MOTD).
+#     Verified path: DXSpider resolves $motd to $main::local_data/motd
+#     (a persisted volume) when no newer /spider/data/motd exists — we
+#     never create the latter. Same first-run / OVERWRITE_CONFIG guard.
+# ---------------------------------------------------------------------------
+MOTD_TARGET="/spider/local_data/motd"
+MOTD_TMPL="/spider/templates/motd.tmpl"
+
+# -s (exists AND non-empty), not -f: /spider/local_data is a persisted
+# volume that may predate this feature or carry a zero-byte motd. DXSpider
+# send_file() passes the -e guard on a 0-byte file and silently transmits
+# nothing, so an empty motd looks identical to "no MOTD". A real operator
+# MOTD is never empty, so -s still preserves genuine operator edits while
+# self-healing a missing/empty/stale persisted file.
+if [[ ! -s "${MOTD_TARGET}" || "${OVERWRITE_CONFIG}" == "yes" ]]; then
+    echo "[entrypoint] Writing ${MOTD_TARGET} from template..."
+    sed \
+        -e "s|__NODE_CALL__|${NODE_CALL}|g" \
+        -e "s|__SYSOP_CALL__|${SYSOP_CALL}|g" \
+        -e "s|__SYSOP_NAME__|${SYSOP_NAME}|g" \
+        -e "s|__LOCATOR__|${LOCATOR}|g" \
+        -e "s|__QTH__|${NODE_QTH}|g" \
+        -e "s|__EMAIL__|${SYSOP_EMAIL}|g" \
+        -e "s|__DASHBOARD_URL__|${DASHBOARD_URL}|g" \
+        "${MOTD_TMPL}" > "${MOTD_TARGET}"
+    echo "[entrypoint] MOTD written."
+else
+    echo "[entrypoint] ${MOTD_TARGET} exists and OVERWRITE_CONFIG!=yes — preserving operator config."
+fi
+
+# ---------------------------------------------------------------------------
+# 3c. Render /spider/local_data/startup (DXSpider startup command script).
+#     DXSpider reads /spider/scripts/startup, which is NOT a persisted
+#     volume; we render to the persisted local_data path and symlink it
+#     into place in section 4b before cluster.pl starts. Only __NODE_CALL__
+#     is substituted; every directive in the template stays commented.
+# ---------------------------------------------------------------------------
+STARTUP_TARGET="/spider/local_data/startup"
+STARTUP_TMPL="/spider/templates/startup.tmpl"
+
+# -s, not -f: same stale/empty persisted-volume self-heal rationale as 3b.
+if [[ ! -s "${STARTUP_TARGET}" || "${OVERWRITE_CONFIG}" == "yes" ]]; then
+    echo "[entrypoint] Writing ${STARTUP_TARGET} from template..."
+    sed \
+        -e "s|__NODE_CALL__|${NODE_CALL}|g" \
+        "${STARTUP_TMPL}" > "${STARTUP_TARGET}"
+    echo "[entrypoint] startup script written."
+else
+    echo "[entrypoint] ${STARTUP_TARGET} exists and OVERWRITE_CONFIG!=yes — preserving operator config."
+fi
+
+# ---------------------------------------------------------------------------
+# 3d. Render /spider/local_cmd/show/dashboard.pl (custom "show/dashboard"
+#     command that prints this node's live stats dashboard URL inside a
+#     telnet session). /spider/local_cmd is searched before /spider/cmd by
+#     DXCommandmode.pm, so show/<x>.pl there adds command "show/<x>".
+#
+#     Rendered UNCONDITIONALLY on every start (no -s/OVERWRITE guard): this
+#     is a generated artifact, NOT operator config, and /spider/local_cmd is
+#     image-layer / non-persisted, so it must be (re)written each start.
+#     Done here while still root and BEFORE the chown in section 4 so the
+#     rendered file ends up owned by sysop:spider.
+# ---------------------------------------------------------------------------
+DASHCMD_TARGET="/spider/local_cmd/show/dashboard.pl"
+DASHCMD_TMPL="/spider/templates/cmd_dashboard.tmpl"
+
+echo "[entrypoint] Writing ${DASHCMD_TARGET} from template..."
+mkdir -p /spider/local_cmd/show
+sed \
+    -e "s|__NODE_CALL__|${NODE_CALL}|g" \
+    -e "s|__DASHBOARD_URL__|${DASHBOARD_URL}|g" \
+    "${DASHCMD_TMPL}" > "${DASHCMD_TARGET}"
+echo "[entrypoint] show/dashboard command written."
+
+# ---------------------------------------------------------------------------
 # 4. Ensure runtime directories exist and are owned by sysop:spider
 # ---------------------------------------------------------------------------
 echo "[entrypoint] Ensuring runtime directories..."
+#
+# /spider/local_cmd is created by cluster.pl's BEGIN block via mkdir, but
+# cluster.pl runs as the unprivileged sysop user and /spider itself is
+# root-owned, so that mkdir fails silently and DXProt::init later aborts
+# with "can't open /spider/local_cmd".  Create and chown it here (as root)
+# before privileges are dropped.
 mkdir -p \
     /spider/local \
+    /spider/local_cmd \
     /spider/local_data \
     /spider/local_data/users \
     /spider/local_data/spots \
@@ -76,8 +167,20 @@ mkdir -p \
     /spider/local_data/debug \
     /spider/local_data/msg
 
-chown -R sysop:spider /spider/local /spider/local_data
-echo "[entrypoint] Ownership set on /spider/local and /spider/local_data."
+chown -R sysop:spider /spider/local /spider/local_cmd /spider/local_data
+echo "[entrypoint] Ownership set on /spider/local, /spider/local_cmd and /spider/local_data."
+
+# ---------------------------------------------------------------------------
+# 4b. Symlink the persisted startup script into the location DXSpider reads.
+#     /spider/scripts is image-layer (not a volume) and is reset on every
+#     container start, so this symlink must be (re)created here, as root,
+#     before cluster.pl runs. -n avoids descending into an existing link;
+#     -f replaces any stale file/link. Target was rendered in 3c so it
+#     always exists; a dangling link would make DXSpider silently skip it.
+# ---------------------------------------------------------------------------
+mkdir -p /spider/scripts
+ln -sfn /spider/local_data/startup /spider/scripts/startup
+echo "[entrypoint] Linked /spider/scripts/startup -> /spider/local_data/startup"
 
 # ---------------------------------------------------------------------------
 # 5. First-run only: create sysop user record in DXSpider's users DB

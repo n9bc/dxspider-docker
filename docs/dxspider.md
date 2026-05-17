@@ -130,6 +130,72 @@ inside the volume and have changes survive container restarts.
 
 ---
 
+## Telnet Operator Onboarding
+
+### Connect MOTD
+
+Every telnet user sees a branded message-of-the-day on connect. It is
+rendered by `entrypoint.sh` from `dxspider/templates/motd.tmpl` into
+`/spider/local_data/motd` (on the persisted `dxspider-data` volume) on first
+run, or whenever `OVERWRITE_CONFIG=yes`.
+
+The template carries seven tokens, each substituted from an environment
+variable:
+
+| Token | Environment variable |
+|---|---|
+| `__NODE_CALL__` | `NODE_CALL` |
+| `__SYSOP_CALL__` | `SYSOP_CALL` |
+| `__SYSOP_NAME__` | `SYSOP_NAME` |
+| `__LOCATOR__` | `LOCATOR` |
+| `__QTH__` | `NODE_QTH` |
+| `__EMAIL__` | `SYSOP_EMAIL` |
+| `__DASHBOARD_URL__` | `DASHBOARD_URL` |
+
+`DASHBOARD_URL` is resolved by the shared helper `dxspider/dashboard-url.sh`:
+an explicit value always wins; if left blank it is derived from `DOMAIN`
+(`DOMAIN=localhost` → `http://localhost/`, otherwise
+`https://<DOMAIN>/`).
+
+### Node-Defaults Startup Script
+
+A node-defaults startup script is rendered from
+`dxspider/templates/startup.tmpl` into `/spider/local_data/startup`, which is
+symlinked to `/spider/scripts/startup` — the path DXSpider reads at cluster
+start.
+
+The shipped template has **every directive commented out**. It changes zero
+cluster behaviour until an operator opts in by uncommenting lines. Treat it
+as a documented menu of common node defaults, not active configuration.
+
+### Customising and Persistence
+
+Both `/spider/local_data/motd` and `/spider/local_data/startup` live on the
+persisted `dxspider-data` volume and are operator-editable; edits survive
+container restarts.
+
+The render guard is "missing or empty": a non-empty, operator-edited file is
+preserved as-is, while deleting or emptying it (or setting
+`OVERWRITE_CONFIG=yes` for one start) regenerates it from the template.
+Volumes that predate this feature self-populate the MOTD and startup script
+automatically on the next container (re)creation — no manual step required.
+
+### Troubleshooting
+
+- **No MOTD on connect** — ensure you are connecting to *this* node: check
+  that the callsign in DXSpider's login banner matches your `NODE_CALL`. A
+  port collision with another local cluster on 7300 will land you on a
+  different node. If the file was empty on an old volume, recreate the
+  container with `docker compose up -d --force-recreate dxspider`.
+- **Login banner shows an old/wrong node callsign** — `/spider/local/DXVars.pm`
+  is preserved across restarts (pre-existing behaviour). To refresh node
+  identity, set `OVERWRITE_CONFIG=yes` for one start (or recreate the config
+  volume), then revert it to `no`.
+- **Dashboard link wrong** — set `DASHBOARD_URL` explicitly, or fix `DOMAIN`
+  so the derived URL is correct.
+
+---
+
 ## First-Run: Sysop User Creation
 
 On the first container start, when `/spider/local_data/users/` is empty,
