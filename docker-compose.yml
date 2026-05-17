@@ -60,6 +60,8 @@ services:
       TTYD_USER:        ${TTYD_USER:-sysop}
       TTYD_PASSWORD:    ${TTYD_PASSWORD:-changeme}
       OVERWRITE_CONFIG: ${OVERWRITE_CONFIG:-no}
+      DOMAIN:           ${DOMAIN:-localhost}
+      DASHBOARD_URL:    ${DASHBOARD_URL:-}
     healthcheck:
       test: ["CMD", "nc", "-z", "127.0.0.1", "7300"]
       interval: 30s
