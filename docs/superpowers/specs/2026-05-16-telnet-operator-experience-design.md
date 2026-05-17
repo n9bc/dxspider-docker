@@ -192,3 +192,103 @@ Entrypoint/container integration remains operator-verified on first
 - **Stretch command coupling** — Approach C depends most heavily on
   DXSpider internals. Mitigation: it is a stretch goal, droppable
   without affecting core scope.
+
+## Verified Paths
+
+Source verification performed against the pinned DXSpider source baked
+into the image (Task 1, blocking factual decision).
+
+**Pinned source:** EA3CV fork `mojo` branch, SHA
+`63d47180dc195e026bae23446eb9b798a0e923d6`
+(`https://github.com/EA3CV/dx-spider.git`), as cloned in
+`dxspider/Dockerfile`.
+
+**Docker VOLUME paths (persisted):** `/spider/local` and
+`/spider/local_data` only — `dxspider/Dockerfile:143`
+(`VOLUME ["/spider/local", "/spider/local_data"]`).
+`$main::root` is `/spider` (`perl/cluster.pl:60`).
+
+### MOTD (connect message of the day)
+
+**Canonical path: `/spider/local_data/motd` — ALREADY PERSISTED.**
+
+Derivation (read from source, not inferred):
+
+- `perl/SysVar.pm:34` — `$motd = "motd"` (bare filename, no path).
+- `perl/cluster.pl:635` — `localdata_mv($motd)` migrates a legacy
+  `/spider/data/motd` into `/spider/local_data/motd` if present
+  (`perl/DXUtil.pm:574-583`).
+- `perl/cluster.pl:636` — `$motd = localdata($motd)` reassigns
+  `$main::motd` to an **absolute** path. `localdata()`
+  (`perl/DXUtil.pm:554-572`) sets `$lfn = "$main::local_data/$ifn"`
+  (= `/spider/local_data/motd`) and `$dfn = "$main::data/$ifn"`; it
+  returns `$lfn` unless a *newer* `$dfn` exists. The pinned image
+  ships **no** `/spider/data/motd` (verified: `/spider/data` contains
+  only `bands.pl`, `cty.dat`, `prefix_data.pl`, `wpxloc.raw`), so the
+  function deterministically returns `/spider/local_data/motd`.
+- `perl/DXCommandmode.pm:1350-1369` — `send_motd()` is called per
+  connection (`:173`). It probes language/registration variants
+  (`${main::motd}_nor_<lang>`, `${main::motd}_<lang>`, `_ax25`) and
+  falls back to the base `$main::motd`; line `:1360`
+  `$motd = $main::motd unless $motd && -e $motd;` then `:1368`
+  `$self->send_file($motd) if -e $motd;` opens that absolute path.
+
+Because `$main::motd` is rooted at `$main::local_data`
+(`perl/SysVar.pm:19` / `cluster.pl:76`, `= "$root/local_data"`), every
+candidate the connect path opens lives under the persisted
+`/spider/local_data` volume.
+
+**Render-target decision:** Render the MOTD **directly** to
+`/spider/local_data/motd`. It is on a persisted volume — **no symlink
+required**. Operator edits survive container rebuilds.
+
+### Startup script (run by cluster.pl at boot)
+
+**Canonical path: `/spider/scripts/startup` — NOT persisted.**
+
+Derivation:
+
+- `perl/cluster.pl:742-743` — `# read startup script` /
+  `my $script = new Script "startup";` then `:744`
+  `$script->run($main::me) if $script;`.
+- `perl/Script.pm:20` — `my $base = "$main::root/scripts";`.
+- `perl/Script.pm:29-47` — `new()`: `$mybase = shift || $base;`
+  `my $fn = "$mybase/$script";` → opens
+  `/spider/scripts/startup` (no second arg passed from `cluster.pl`,
+  so `$base` is used). With `$main::root = /spider`
+  (`cluster.pl:60`), the absolute path is **`/spider/scripts/startup`**.
+- `/spider/scripts` is **not** a VOLUME (only `/spider/local` and
+  `/spider/local_data` are). Verified: the dir ships only
+  `.gitignore` (contents: `*`, `!.gitignore`, `*.issue`) and is
+  otherwise empty, so a file written there is lost on image rebuild /
+  container recreate.
+- No usable override variable exists: `$base` is hardcoded to
+  `$main::root/scripts` in `Script.pm:20`; only `DXSPIDER_ROOT`
+  (`cluster.pl:61`) could change it, but that relocates the entire
+  DXSpider tree — not a viable scoped override.
+
+**Render-target decision:** Render the startup script to a persisted
+path **`/spider/local_data/startup`**, and at container startup create
+a symlink so DXSpider's hardcoded canonical path resolves to the
+persisted file:
+
+```sh
+ln -sfn /spider/local_data/startup /spider/scripts/startup
+```
+
+(`/spider/scripts` itself is recreated from the image each rebuild, so
+the entrypoint must (re)create this symlink every start, before
+`cluster.pl` runs.)
+
+### local_cmd convention (informational, for stretch Task 10)
+
+Custom/local commands live in **`/spider/local_cmd`**
+(`perl/SysVar.pm:28` and `perl/cluster.pl:73,81`,
+`$localcmd = "$root/local_cmd"`; auto-created at `cluster.pl:73`
+`mkdir "$root/local_cmd", 02774 unless -d ...`). A custom command is a
+`.pl` file mirroring the built-in `cmd/` tree (e.g.
+`/spider/local_cmd/show/<name>.pl`); `local_cmd` is searched **before**
+`cmd` (`perl/DXCommandmode.pm:545`,
+`search($main::localcmd, $cmd, "pl")`). Note `/spider/local_cmd` is
+**not** a VOLUME, so a persisted stretch command will need the same
+render-to-`local_data` + symlink treatment as the startup script.
