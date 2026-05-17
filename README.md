@@ -153,6 +153,52 @@ telnet localhost 7300
 
 ---
 
+## Container Images (GHCR)
+
+The two custom services are published to the GitHub Container Registry on
+each tagged release, so you can run the stack without building locally:
+
+| Image | Pull |
+|-------|------|
+| DXSpider node | `ghcr.io/n9bc/dxspider-docker/dxspider:latest` |
+| Stats/dashboard | `ghcr.io/n9bc/dxspider-docker/stats-svc:latest` |
+
+Run from published images instead of `--build` using the provided override:
+
+```bash
+git clone https://github.com/n9bc/dxspider-docker.git
+cd dxspider-docker
+cp .env.example .env          # edit as in Quick Start step 3
+
+# Pull and start the latest release (postgres/caddy are stock images)
+docker compose -f docker-compose.yml -f docker-compose.ghcr.yml pull
+docker compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d
+
+# Pin a specific release instead of latest:
+IMAGE_TAG=0.2.0 docker compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d
+```
+
+Images are `linux/amd64` (the bundled `ttyd` binary is x86_64-only; arm64
+users build from source per `dxspider/Dockerfile`). Each image carries OCI
+provenance labels linking it back to this repository and its license.
+
+### Cutting a release
+
+Publishing is automated by `.github/workflows/release.yml`. To release:
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+The workflow builds both images and pushes `:0.2.0`, `:0.2`, and `:latest`
+to GHCR using the repository's `GITHUB_TOKEN` — no manual registry
+credentials. New GHCR packages are private by default; set each package's
+visibility to **Public** once (Repo → Packages) so others can pull without
+authenticating.
+
+---
+
 ## Documentation
 
 Full technical documentation lives under `docs/`. The files listed below are being written as part of this release; link here for orientation and detail.

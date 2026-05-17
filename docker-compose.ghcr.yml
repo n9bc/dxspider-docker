@@ -1,0 +1,23 @@
+# docker-compose.ghcr.yml — run the published GHCR images instead of
+# building the custom images locally.
+#
+# Pull and start (latest release):
+#   docker compose -f docker-compose.yml -f docker-compose.ghcr.yml pull
+#   docker compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d
+#
+# Pin a specific release:
+#   IMAGE_TAG=0.2.0 docker compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d
+#
+# This override layers an `image:` (and always-pull policy) onto the two
+# custom services. Without `--build`, Compose uses the pulled registry
+# image; the base file's `build:` stanza is still available if you ever do
+# pass `--build`. postgres and caddy are stock images already.
+
+services:
+  dxspider:
+    image: ghcr.io/n9bc/dxspider-docker/dxspider:${IMAGE_TAG:-latest}
+    pull_policy: always
+
+  stats-svc:
+    image: ghcr.io/n9bc/dxspider-docker/stats-svc:${IMAGE_TAG:-latest}
+    pull_policy: always
