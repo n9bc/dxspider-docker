@@ -125,6 +125,29 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 3d. Render /spider/local_cmd/show/dashboard.pl (custom "show/dashboard"
+#     command that prints this node's live stats dashboard URL inside a
+#     telnet session). /spider/local_cmd is searched before /spider/cmd by
+#     DXCommandmode.pm, so show/<x>.pl there adds command "show/<x>".
+#
+#     Rendered UNCONDITIONALLY on every start (no -s/OVERWRITE guard): this
+#     is a generated artifact, NOT operator config, and /spider/local_cmd is
+#     image-layer / non-persisted, so it must be (re)written each start.
+#     Done here while still root and BEFORE the chown in section 4 so the
+#     rendered file ends up owned by sysop:spider.
+# ---------------------------------------------------------------------------
+DASHCMD_TARGET="/spider/local_cmd/show/dashboard.pl"
+DASHCMD_TMPL="/spider/templates/cmd_dashboard.tmpl"
+
+echo "[entrypoint] Writing ${DASHCMD_TARGET} from template..."
+mkdir -p /spider/local_cmd/show
+sed \
+    -e "s|__NODE_CALL__|${NODE_CALL}|g" \
+    -e "s|__DASHBOARD_URL__|${DASHBOARD_URL}|g" \
+    "${DASHCMD_TMPL}" > "${DASHCMD_TARGET}"
+echo "[entrypoint] show/dashboard command written."
+
+# ---------------------------------------------------------------------------
 # 4. Ensure runtime directories exist and are owned by sysop:spider
 # ---------------------------------------------------------------------------
 echo "[entrypoint] Ensuring runtime directories..."
