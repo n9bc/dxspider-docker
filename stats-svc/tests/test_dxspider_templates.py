@@ -9,6 +9,7 @@ import subprocess
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TEMPLATES = REPO / "dxspider" / "templates"
 HELPER = REPO / "dxspider" / "dashboard-url.sh"
+RENDER_HELPER = REPO / "dxspider" / "render-template.sh"
 
 TOKEN_MAP = {
     "__NODE_CALL__": "N9BC-2",
@@ -100,3 +101,112 @@ def test_dashboard_url_explicit_wins():
         _derive({"DOMAIN": "dx.example.com", "DASHBOARD_URL": "http://x/"})
         == "http://x/"
     )
+
+
+def _render(template_bytes: bytes, *pairs: str) -> bytes:
+    """Run the REAL render-template.sh against an in-memory template.
+
+    Mirrors _derive's robustness: the helper source is read as text and
+    prepended to a generated bash script fed entirely via stdin as bytes.
+    No Windows path is ever handed to bash and nothing relies on env=
+    propagation (host bash may be WSL bash). The template bytes are written
+    to a temp file by a tiny perl one-liner that reads them from a base64
+    literal embedded in the script — this preserves the EXACT template
+    bytes (including the precise trailing-newline count, control bytes and
+    backslashes) with no heredoc/quoting artifacts. render_template writes
+    to a temp file, and we cat that file back so stdout is the exact
+    rendered bytes."""
+    import base64
+
+    b64 = base64.b64encode(template_bytes).decode("ascii")
+    args = " ".join(shlex.quote(p) for p in pairs)
+    script = (
+        RENDER_HELPER.read_text()
+        + "\n"
+        + "set -eu\n"
+        + 'rt_tmpl="$(mktemp)"\n'
+        + 'rt_out="$(mktemp)"\n'
+        + f"printf %s {shlex.quote(b64)} | perl -MMIME::Base64 -0777 -ne "
+        + shlex.quote("print decode_base64($_)")
+        + ' > "$rt_tmpl"\n'
+        + f'render_template "$rt_tmpl" "$rt_out" {args}\n'
+        + 'cat "$rt_out"\n'
+        + 'rm -f "$rt_tmpl" "$rt_out"\n'
+    )
+    script_bytes = script.encode("utf-8")
+    result = subprocess.run(
+        ["bash", "-s"],
+        input=script_bytes,
+        capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr.decode("utf-8", "replace")
+    return result.stdout
+
+
+def test_render_byte_identity_normal_values():
+    out = _render(
+        b"X=__NODE_CALL__ Y=__DASHBOARD_URL__\n",
+        "__NODE_CALL__", "N0CALL-2",
+        "__DASHBOARD_URL__", "http://localhost/",
+    )
+    assert out == b"X=N0CALL-2 Y=http://localhost/\n"
+
+
+def test_render_ampersand_literal():
+    out = _render(
+        b"url=__DASHBOARD_URL__\n",
+        "__DASHBOARD_URL__", "https://h/?a=1&b=2",
+    )
+    assert b"https://h/?a=1&b=2" in out
+    assert b"__DASHBOARD_URL__" not in out
+
+
+def test_render_pipe_literal_exit_zero():
+    # A value containing '|' aborted the old `sed s|...|...|` pipeline.
+    out = _render(
+        b"qth=__QTH__\n",
+        "__QTH__", "a|b",
+    )
+    assert out == b"qth=a|b\n"
+
+
+def test_render_backslash_literal():
+    # Literal backslash-n must survive as backslash-n, not become a newline.
+    out = _render(
+        b"v=__NODE_CALL__\n",
+        "__NODE_CALL__", "a\\nb",
+    )
+    assert out == b"v=a\\nb\n"
+
+
+def test_render_dollar_at_literal():
+    out = _render(
+        b"v=__NODE_CALL__\n",
+        "__NODE_CALL__", "de$x@y",
+    )
+    assert out == b"v=de$x@y\n"
+
+
+def test_render_multi_token_sequential_order():
+    out = _render(
+        b"A=__ONE__ B=__TWO__\n",
+        "__ONE__", "first",
+        "__TWO__", "second",
+    )
+    assert out == b"A=first B=second\n"
+
+
+def test_render_startup_zero_active_directive_invariant():
+    """The new engine must not regress the safety invariant: rendering the
+    real startup.tmpl with a metachar-laden NODE_CALL still yields only
+    comment lines (no active directive injected via & or |)."""
+    tmpl = (TEMPLATES / "startup.tmpl").read_bytes()
+    out = _render(
+        tmpl,
+        "__NODE_CALL__", "N0&CALL|X-2",
+    )
+    text = out.decode("utf-8")
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped:
+            assert stripped.startswith("#"), f"active directive: {line!r}"
