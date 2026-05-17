@@ -29,6 +29,8 @@ DOMAIN="${DOMAIN:-localhost}"
 # shellcheck source=/dev/null
 . /spider/dashboard-url.sh
 DASHBOARD_URL="$(derive_dashboard_url)"
+# shellcheck source=/dev/null
+. /spider/render-template.sh
 
 echo "[entrypoint] NODE_CALL=${NODE_CALL}  SYSOP_CALL=${SYSOP_CALL}  LOCATOR=${LOCATOR}"
 echo "[entrypoint] Telnet port=${NODE_TELNET_PORT}  Web console port=${SYSOP_WEB_PORT}"
@@ -42,15 +44,13 @@ DXVARS_TMPL="/spider/templates/DXVars.pm.tmpl"
 
 if [[ ! -f "${DXVARS_TARGET}" || "${OVERWRITE_CONFIG}" == "yes" ]]; then
     echo "[entrypoint] Writing ${DXVARS_TARGET} from template..."
-    # Use sed with | delimiter to avoid clashes with / in paths or callsigns.
-    sed \
-        -e "s|__NODE_CALL__|${NODE_CALL}|g" \
-        -e "s|__SYSOP_CALL__|${SYSOP_CALL}|g" \
-        -e "s|__SYSOP_NAME__|${SYSOP_NAME}|g" \
-        -e "s|__LOCATOR__|${LOCATOR}|g" \
-        -e "s|__QTH__|${NODE_QTH}|g" \
-        -e "s|__EMAIL__|${SYSOP_EMAIL}|g" \
-        "${DXVARS_TMPL}" > "${DXVARS_TARGET}"
+    render_template "${DXVARS_TMPL}" "${DXVARS_TARGET}" \
+        __NODE_CALL__ "${NODE_CALL}" \
+        __SYSOP_CALL__ "${SYSOP_CALL}" \
+        __SYSOP_NAME__ "${SYSOP_NAME}" \
+        __LOCATOR__ "${LOCATOR}" \
+        __QTH__ "${NODE_QTH}" \
+        __EMAIL__ "${SYSOP_EMAIL}"
     echo "[entrypoint] DXVars.pm written."
 else
     echo "[entrypoint] ${DXVARS_TARGET} exists and OVERWRITE_CONFIG!=yes — preserving operator config."
@@ -64,9 +64,8 @@ LISTENERS_TMPL="/spider/templates/Listeners.pm.tmpl"
 
 if [[ ! -f "${LISTENERS_TARGET}" || "${OVERWRITE_CONFIG}" == "yes" ]]; then
     echo "[entrypoint] Writing ${LISTENERS_TARGET} from template..."
-    sed \
-        -e "s|__TELNET_PORT__|${NODE_TELNET_PORT}|g" \
-        "${LISTENERS_TMPL}" > "${LISTENERS_TARGET}"
+    render_template "${LISTENERS_TMPL}" "${LISTENERS_TARGET}" \
+        __TELNET_PORT__ "${NODE_TELNET_PORT}"
     echo "[entrypoint] Listeners.pm written."
 else
     echo "[entrypoint] ${LISTENERS_TARGET} exists and OVERWRITE_CONFIG!=yes — preserving operator config."
@@ -89,15 +88,14 @@ MOTD_TMPL="/spider/templates/motd.tmpl"
 # self-healing a missing/empty/stale persisted file.
 if [[ ! -s "${MOTD_TARGET}" || "${OVERWRITE_CONFIG}" == "yes" ]]; then
     echo "[entrypoint] Writing ${MOTD_TARGET} from template..."
-    sed \
-        -e "s|__NODE_CALL__|${NODE_CALL}|g" \
-        -e "s|__SYSOP_CALL__|${SYSOP_CALL}|g" \
-        -e "s|__SYSOP_NAME__|${SYSOP_NAME}|g" \
-        -e "s|__LOCATOR__|${LOCATOR}|g" \
-        -e "s|__QTH__|${NODE_QTH}|g" \
-        -e "s|__EMAIL__|${SYSOP_EMAIL}|g" \
-        -e "s|__DASHBOARD_URL__|${DASHBOARD_URL}|g" \
-        "${MOTD_TMPL}" > "${MOTD_TARGET}"
+    render_template "${MOTD_TMPL}" "${MOTD_TARGET}" \
+        __NODE_CALL__ "${NODE_CALL}" \
+        __SYSOP_CALL__ "${SYSOP_CALL}" \
+        __SYSOP_NAME__ "${SYSOP_NAME}" \
+        __LOCATOR__ "${LOCATOR}" \
+        __QTH__ "${NODE_QTH}" \
+        __EMAIL__ "${SYSOP_EMAIL}" \
+        __DASHBOARD_URL__ "${DASHBOARD_URL}"
     echo "[entrypoint] MOTD written."
 else
     echo "[entrypoint] ${MOTD_TARGET} exists and OVERWRITE_CONFIG!=yes — preserving operator config."
@@ -116,9 +114,8 @@ STARTUP_TMPL="/spider/templates/startup.tmpl"
 # -s, not -f: same stale/empty persisted-volume self-heal rationale as 3b.
 if [[ ! -s "${STARTUP_TARGET}" || "${OVERWRITE_CONFIG}" == "yes" ]]; then
     echo "[entrypoint] Writing ${STARTUP_TARGET} from template..."
-    sed \
-        -e "s|__NODE_CALL__|${NODE_CALL}|g" \
-        "${STARTUP_TMPL}" > "${STARTUP_TARGET}"
+    render_template "${STARTUP_TMPL}" "${STARTUP_TARGET}" \
+        __NODE_CALL__ "${NODE_CALL}"
     echo "[entrypoint] startup script written."
 else
     echo "[entrypoint] ${STARTUP_TARGET} exists and OVERWRITE_CONFIG!=yes — preserving operator config."
@@ -141,10 +138,9 @@ DASHCMD_TMPL="/spider/templates/cmd_dashboard.tmpl"
 
 echo "[entrypoint] Writing ${DASHCMD_TARGET} from template..."
 mkdir -p /spider/local_cmd/show
-sed \
-    -e "s|__NODE_CALL__|${NODE_CALL}|g" \
-    -e "s|__DASHBOARD_URL__|${DASHBOARD_URL}|g" \
-    "${DASHCMD_TMPL}" > "${DASHCMD_TARGET}"
+render_template "${DASHCMD_TMPL}" "${DASHCMD_TARGET}" \
+    __NODE_CALL__ "${NODE_CALL}" \
+    __DASHBOARD_URL__ "${DASHBOARD_URL}"
 echo "[entrypoint] show/dashboard command written."
 
 # ---------------------------------------------------------------------------

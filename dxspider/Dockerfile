@@ -132,6 +132,7 @@ COPY templates/motd.tmpl    /spider/templates/motd.tmpl
 COPY templates/startup.tmpl /spider/templates/startup.tmpl
 COPY templates/cmd_dashboard.tmpl /spider/templates/cmd_dashboard.tmpl
 COPY dashboard-url.sh       /spider/dashboard-url.sh
+COPY render-template.sh /spider/render-template.sh
 
 # ---------------------------------------------------------------------------
 # Entrypoint script
