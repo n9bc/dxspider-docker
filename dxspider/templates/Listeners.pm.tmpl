@@ -9,12 +9,16 @@
 #
 # Format: each element is an arrayref [ host, port ] or
 #         [ host, port, "option" ] — see DXSpider docs for full options.
+#
+# IMPORTANT: DXSpider iterates @main::listen (see cluster.pl: `foreach my $l
+# (@main::listen)`).  The listener array MUST live in the `main::` package as
+# a plain global — do NOT add `package Listeners;`, `use strict;`, or `our`,
+# or the array ends up in @Listeners::listen, DXSpider sees no listeners, and
+# the node ceases immediately after "starting listeners ...".
 
-package Listeners;
+package main;
 
-use strict;
-
-our @listen = (
+@listen = (
     ["0.0.0.0", __TELNET_PORT__],
 );
 
