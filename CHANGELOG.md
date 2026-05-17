@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Telnet operator onboarding**: branded connect MOTD (node identity,
+  live dashboard URL, command cheat-sheet), an opt-in fully-commented
+  node-defaults startup script, `DOMAIN`→`DASHBOARD_URL` derivation, and a
+  `show/dashboard` command — all rendered by `entrypoint.sh` into the
+  persisted volume. See [docs/dxspider.md](docs/dxspider.md).
+- **Published container images**: tagged releases publish
+  `ghcr.io/n9bc/dxspider-docker/dxspider` and `.../stats-svc` to GHCR via
+  `.github/workflows/release.yml`; `docker-compose.ghcr.yml` runs the stack
+  from published images without a local build.
+
+### Changed
+
+- Config/template rendering in `entrypoint.sh` now uses a metacharacter-safe
+  literal substitution helper (`render-template.sh`, perl) instead of
+  `sed`: values containing `| & \` or newlines can no longer break the
+  render or silently corrupt output. Byte-identical for normal values.
+- Render guards use `-s` (exists-and-non-empty) so a missing/empty/stale
+  persisted MOTD or startup file self-heals while genuine operator edits
+  are preserved.
+- `DXVars.pm` / `Listeners.pm` templates corrected to the `main::`
+  namespace so DXSpider reads the configured node identity and listeners.
+
 ### Planned (Phase 2 — documented, config-gated, not active in v1)
 
 - Partner / inter-cluster peering (DXSpider PC-protocol `connect` blocks).

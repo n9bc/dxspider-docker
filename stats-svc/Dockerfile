@@ -2,6 +2,13 @@
 # stats-svc: telnet ingestor + FastAPI dashboard for the DX cluster.
 FROM python:3.12-slim AS base
 
+# OCI image metadata — links the published GHCR package to this repo and
+# records provenance. CI layers version/revision/created on top at release.
+LABEL org.opencontainers.image.title="dxspider-docker/stats-svc" \
+      org.opencontainers.image.description="DX cluster spot ingestor + FastAPI stats dashboard (port 8000)" \
+      org.opencontainers.image.source="https://github.com/n9bc/dxspider-docker" \
+      org.opencontainers.image.licenses="MIT"
+
 # Faster, quieter, no .pyc clutter; unbuffered logs for container stdout.
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

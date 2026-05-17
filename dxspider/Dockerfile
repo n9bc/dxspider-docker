@@ -24,6 +24,16 @@
 FROM debian:bookworm-slim
 
 # ---------------------------------------------------------------------------
+# OCI image metadata. Links the published GHCR package to this repo and
+# records provenance for anyone who pulls the image. CI (metadata-action)
+# layers version/revision/created labels on top of these at release time.
+# ---------------------------------------------------------------------------
+LABEL org.opencontainers.image.title="dxspider-docker/dxspider" \
+      org.opencontainers.image.description="DXSpider amateur-radio DX cluster node (telnet :7300) + ttyd sysop console" \
+      org.opencontainers.image.source="https://github.com/n9bc/dxspider-docker" \
+      org.opencontainers.image.licenses="MIT"
+
+# ---------------------------------------------------------------------------
 # Build arguments — source coordinates (overridable; see comment block above)
 # ---------------------------------------------------------------------------
 ARG SPIDER_REPO=https://github.com/EA3CV/dx-spider.git
