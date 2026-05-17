@@ -11,81 +11,63 @@
 #   __LOCATOR__     <- LOCATOR           (required, e.g. FN31pr)
 #   __QTH__         <- NODE_QTH          (optional, default "Unknown QTH")
 #   __EMAIL__       <- SYSOP_EMAIL       (optional, default "sysop@example.com")
+#
+# IMPORTANT: DXSpider loads this file with `use DXVars;` and expects the
+# configuration variables to live in the `main::` package as plain globals
+# (this matches the upstream DXVars.pm.issue sample).  Do NOT add
+# `package DXVars;`, `use strict;`, or `our` — that hides the variables in
+# the wrong namespace and every DXSpider script reads them as empty.
+#
+# Substituted string values are SINGLE-quoted on purpose: there is no
+# `use strict` here, so a double-quoted "n9bc@arrl.net" would interpolate
+# @arrl as an (empty) array and silently corrupt the value.
 
-package DXVars;
-
-use strict;
+package main;
 
 # ---------------------------------------------------------------------------
-# Identity — all tokens replaced by entrypoint.sh
+# Identity — all tokens replaced by entrypoint.sh.  Use CAPITAL LETTERS for
+# callsigns (DXSpider upper-cases them anyway and warns if it has to).
 # ---------------------------------------------------------------------------
 
 # Full callsign of this cluster node (including SSID, e.g. N0CALL-2).
-our $mycall    = "__NODE_CALL__";
+$mycall = '__NODE_CALL__';
 
 # Sysop's personal callsign (no SSID).
-our $myalias   = "__SYSOP_CALL__";
+$myalias = '__SYSOP_CALL__';
 
 # Sysop's name (used in welcome banners).
-our $myname    = "__SYSOP_NAME__";
+$myname = '__SYSOP_NAME__';
 
 # Grid-square locator of the node site.
-our $mylocator = "__LOCATOR__";
+$mylocator = '__LOCATOR__';
 
 # QTH description (city, state/country).
-our $myqth     = "__QTH__";
+$myqth = '__QTH__';
 
 # Contact e-mail shown in /show/dx output.
-our $myemail   = "__EMAIL__";
+$myemail = '__EMAIL__';
+
+# Latitude  (+)ve = North, (-)ve = South — decimal degrees.
+# Longitude (+)ve = East,  (-)ve = West  — decimal degrees.
+# Left at 0.0; DXSpider derives position from $mylocator when these are unset.
+$mylatitude = +0.0;
+$mylongitude = +0.0;
 
 # ---------------------------------------------------------------------------
-# Paths — relative to Spider root; leave as-is unless you know why.
+# Country codes this node is located in.  Empty = derive from $mycall, which
+# suits almost every sysop.  Example for Spain: qw(EA EA8 EA9 EA0)
 # ---------------------------------------------------------------------------
-our $data      = "/spider/local_data";
-our $cmd       = "/spider/cmd";
-our $perl      = "/spider/perl";
-our $spots     = "/spider/local_data/spots";
-our $msg       = "/spider/local_data/msg";
-our $log       = "/spider/local_data/log";
+@my_cc = qw();
 
 # ---------------------------------------------------------------------------
-# Cluster behaviour defaults
+# Debug categories written to the debug log.
 # ---------------------------------------------------------------------------
+@debug = qw(chan state msg cron connect progress nologchan);
 
-# Maximum number of simultaneously connected users.
-our $maxconnect = 10;
+# Emit XML? (legacy feature; keep 0 unless you know you need it.)
+$do_xml = 0;
 
-# Spots announced to local users (0 = all, positive N = last N seconds).
-our $annoucedx  = 0;
-
-# Log spot data for showdx (days to keep).
-our $keepalive  = 2;
-
-# Timezone offset from UTC in hours (use 0 for UTC; DXSpider prefers UTC).
-our $UTC = 0;
-
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
-our $debugpath = "/spider/local_data/debug";
-
-# ---------------------------------------------------------------------------
-# Phase 2 — inter-cluster peering (BPQ/AR-Cluster/DX Spider nodes)
-# Uncomment and populate when you are ready to peer with upstream nodes.
-# These settings are intentionally inactive in Phase 1.
-# ---------------------------------------------------------------------------
-#
-# Example static BPQ peer (replace with your upstream node details):
-# our @bpq_nodes = ();      # e.g. qw(GB7TLH GB7DJK)
-#
-# Example AR-Cluster / DX Spider connect block goes in /spider/local/connect/
-# (one file per peer, not in DXVars.pm).  See /spider/cmd/connect.hlp.
-#
-# Phase 2 env vars (document in compose):
-#   UPSTREAM_NODE_CALL   — callsign of upstream node to connect to
-#   UPSTREAM_NODE_HOST   — hostname/IP
-#   UPSTREAM_NODE_PORT   — port (default 7300)
-#
-# ---------------------------------------------------------------------------
+# Contest announcement host (upstream default; rarely changed).
+$Internet::contest_host = "contest.dxtron.com";
 
 1;   # Perl module — required true return value

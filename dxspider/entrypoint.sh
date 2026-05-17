@@ -67,8 +67,15 @@ fi
 # 4. Ensure runtime directories exist and are owned by sysop:spider
 # ---------------------------------------------------------------------------
 echo "[entrypoint] Ensuring runtime directories..."
+#
+# /spider/local_cmd is created by cluster.pl's BEGIN block via mkdir, but
+# cluster.pl runs as the unprivileged sysop user and /spider itself is
+# root-owned, so that mkdir fails silently and DXProt::init later aborts
+# with "can't open /spider/local_cmd".  Create and chown it here (as root)
+# before privileges are dropped.
 mkdir -p \
     /spider/local \
+    /spider/local_cmd \
     /spider/local_data \
     /spider/local_data/users \
     /spider/local_data/spots \
@@ -76,8 +83,8 @@ mkdir -p \
     /spider/local_data/debug \
     /spider/local_data/msg
 
-chown -R sysop:spider /spider/local /spider/local_data
-echo "[entrypoint] Ownership set on /spider/local and /spider/local_data."
+chown -R sysop:spider /spider/local /spider/local_cmd /spider/local_data
+echo "[entrypoint] Ownership set on /spider/local, /spider/local_cmd and /spider/local_data."
 
 # ---------------------------------------------------------------------------
 # 5. First-run only: create sysop user record in DXSpider's users DB
