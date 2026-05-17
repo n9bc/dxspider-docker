@@ -81,7 +81,13 @@ fi
 MOTD_TARGET="/spider/local_data/motd"
 MOTD_TMPL="/spider/templates/motd.tmpl"
 
-if [[ ! -f "${MOTD_TARGET}" || "${OVERWRITE_CONFIG}" == "yes" ]]; then
+# -s (exists AND non-empty), not -f: /spider/local_data is a persisted
+# volume that may predate this feature or carry a zero-byte motd. DXSpider
+# send_file() passes the -e guard on a 0-byte file and silently transmits
+# nothing, so an empty motd looks identical to "no MOTD". A real operator
+# MOTD is never empty, so -s still preserves genuine operator edits while
+# self-healing a missing/empty/stale persisted file.
+if [[ ! -s "${MOTD_TARGET}" || "${OVERWRITE_CONFIG}" == "yes" ]]; then
     echo "[entrypoint] Writing ${MOTD_TARGET} from template..."
     sed \
         -e "s|__NODE_CALL__|${NODE_CALL}|g" \
@@ -107,7 +113,8 @@ fi
 STARTUP_TARGET="/spider/local_data/startup"
 STARTUP_TMPL="/spider/templates/startup.tmpl"
 
-if [[ ! -f "${STARTUP_TARGET}" || "${OVERWRITE_CONFIG}" == "yes" ]]; then
+# -s, not -f: same stale/empty persisted-volume self-heal rationale as 3b.
+if [[ ! -s "${STARTUP_TARGET}" || "${OVERWRITE_CONFIG}" == "yes" ]]; then
     echo "[entrypoint] Writing ${STARTUP_TARGET} from template..."
     sed \
         -e "s|__NODE_CALL__|${NODE_CALL}|g" \
